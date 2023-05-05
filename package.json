@@ -1,5 +1,5 @@
 {
-  "name": "@alwian/cache",
+  "name": "@alwian/data-cache",
   "version": "0.0.0",
   "description": "Module for caching data",
   "main": "dist/index.js",

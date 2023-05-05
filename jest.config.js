@@ -10,7 +10,7 @@ const config = {
       statements: 0
     }
   },
-  collectCoverageFrom: ["src/**/*.ts"]
+  collectCoverageFrom: ["src/**/*.ts", "!src/index.ts"]
 };
 
 export default config;
