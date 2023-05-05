@@ -12,6 +12,9 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": true,
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+    "types": ["jest"]
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["src/**/*.ts"]
 }
