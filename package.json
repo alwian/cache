@@ -1,0 +1,17 @@
+{
+  "name": "@alwian/cache",
+  "version": "0.0.0",
+  "description": "Module for caching data",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rm -Rf dist/ && npx tsc",
+    "start": "npm run build && node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.4"
+  }
+}
