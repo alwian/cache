@@ -1,19 +1,24 @@
 class DataCache {
-  #data: Record<string, CacheItem> = {};
-  #timeouts: Record<string, number> = {};
+  #data: Record<string, CachedItem> = {};
+
+  #counter = setInterval(() => {
+    const time = Date.now();
+
+    Object.keys(this.#data).forEach((key: string) => {
+      const ttl = this.#data[key].ttl;
+      if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
+        this.remove(key);
+      }
+    });
+  }, 1000);
 
   constructor(initialData?: Record<string, CacheItem>) {
     if (initialData) {
-      this.#data = initialData;
+      const timeAdded = Date.now();
+      Object.keys(initialData).forEach((key: string) => {
+        this.#data[key] = { ...initialData[key], timeAdded };
+      });
     }
-
-    Object.keys(this.#data).forEach((key: string) => {
-      if (this.#data[key].ttl !== undefined) {
-        this.#timeouts[key] = setTimeout(() => {
-          this.remove(key);
-        }, (this.#data[key].ttl as number) * 1000);
-      }
-    });
   }
 
   get(key: string) {
@@ -21,21 +26,11 @@ class DataCache {
   }
 
   set(key: string, data: CacheItem) {
-    if (this.#timeouts[key]) {
-      clearTimeout(this.#timeouts[key]);
-    }
-    this.#data[key] = data;
-    if (data.ttl) {
-      this.#timeouts[key] = setTimeout(() => this.remove(key), data.ttl * 1000);
-    }
+    this.#data[key] = { ...data, timeAdded: Date.now() };
   }
 
   remove(key: string) {
     delete this.#data[key];
-    if (this.#timeouts[key]) {
-      clearTimeout(this.#timeouts[key]);
-    }
-    delete this.#timeouts[key];
   }
 }
 

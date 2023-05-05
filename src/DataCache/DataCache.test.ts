@@ -26,7 +26,7 @@ describe("DataCache tests", () => {
   it("Automatically deletes data when a ttl is specified", () => {
     const cache = new DataCache({ testKey: { value: "testValue", ttl: 5 } });
 
-    jest.runAllTimers();
+    jest.advanceTimersByTime(5000);
     expect(cache.get("testKey")).toEqual(undefined);
   });
 
@@ -37,7 +37,7 @@ describe("DataCache tests", () => {
     jest.advanceTimersByTime(5000);
     expect(cache.get("testKey")).toEqual("newTestValue");
 
-    jest.runAllTimers();
+    jest.advanceTimersByTime(5000);
     expect(cache.get("testKey")).toEqual(undefined);
   });
 });
