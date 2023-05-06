@@ -103,4 +103,21 @@ describe("DataCache tests", () => {
 
     expect(cache.keys()).toEqual(["key1", "key2"]);
   });
+
+  it("Records access counts for each key", () => {
+    const cache = new DataCache(
+      { key: "key1", value: "value1" },
+      { key: "key2", value: "value2" }
+    );
+
+    cache.get("key1", "key2");
+    cache.get("key1");
+
+    expect(cache.stats("key1").accesses).toEqual(2);
+    expect(
+      (cache.stats("key1", "key2") as Record<string, ItemStats>)["key2"]
+        .accesses
+    ).toEqual(1);
+    expect(cache.stats().accesses).toEqual(3);
+  });
 });

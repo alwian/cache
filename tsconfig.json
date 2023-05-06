@@ -14,8 +14,8 @@
     "noImplicitAny": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "types": ["jest"]
+    "types": ["jest", "node"]
   },
-  "exclude": ["node_modules", "dist", "src/**/*.test.ts"],
+  "exclude": ["node_modules", "dist"],
   "include": ["src/**/*.ts"]
 }

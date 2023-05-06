@@ -6,4 +6,12 @@ interface CacheItem {
 
 interface CachedItem extends CacheItem {
   timeAdded: number;
+  stats: ItemStats;
+}
+
+interface ItemStats {
+  accesses: number;
+}
+interface CacheStats {
+  accesses: number;
 }

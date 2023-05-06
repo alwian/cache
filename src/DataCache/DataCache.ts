@@ -1,6 +1,10 @@
 class DataCache {
   #data: Record<string, CachedItem> = {};
 
+  #stats: CacheStats = {
+    accesses: 0
+  };
+
   #counter = setInterval(() => {
     const time = Date.now();
 
@@ -15,7 +19,7 @@ class DataCache {
   constructor(...initialData: CacheItem[]) {
     const timeAdded = Date.now();
     initialData?.forEach((item: CacheItem) => {
-      this.#data[item.key] = { ...item, timeAdded };
+      this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
     });
   }
 
@@ -23,6 +27,10 @@ class DataCache {
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
       items[key] = this.#data[key]?.value;
+      if (this.#data[key] !== undefined) {
+        this.#data[key].stats.accesses += 1;
+        this.#stats.accesses += 1;
+      }
     });
 
     if (keys.length === 1) {
@@ -34,7 +42,7 @@ class DataCache {
   set(...items: CacheItem[]) {
     const timeAdded = Date.now();
     items.forEach((item: CacheItem) => {
-      this.#data[item.key] = { ...item, timeAdded };
+      this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
     });
   }
 
@@ -67,6 +75,23 @@ class DataCache {
 
   keys() {
     return Object.keys(this.#data);
+  }
+
+  stats(...keys: string[]): CacheStats | ItemStats | Record<string, ItemStats> {
+    if (!keys.length) {
+      return this.#stats;
+    }
+
+    if (keys.length === 1) {
+      return this.#data[keys[0]].stats;
+    }
+
+    const stats: Record<string, ItemStats> = {};
+    keys.forEach((key: string) => {
+      stats[key] = this.#data[key].stats;
+    });
+
+    return stats;
   }
 }
 
