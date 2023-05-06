@@ -23,8 +23,23 @@ class DataCache {
     return this.#data[key]?.value;
   }
 
+  getMultiple(keys: string[]) {
+    const items: Record<string, unknown> = {};
+    keys.forEach((key: string) => {
+      items[key] = this.#data[key].value;
+    });
+    return items;
+  }
+
   set(data: CacheItem) {
     this.#data[data.key] = { ...data, timeAdded: Date.now() };
+  }
+
+  setMultiple(items: CacheItem[]) {
+    const timeAdded = Date.now();
+    items.forEach((item: CacheItem) => {
+      this.#data[item.key] = { ...item, timeAdded };
+    });
   }
 
   remove(key: string) {

@@ -44,4 +44,28 @@ describe("DataCache tests", () => {
     jest.advanceTimersByTime(5000);
     expect(cache.get("testKey")).toEqual(undefined);
   });
+
+  it("Can set multiple keys", () => {
+    const cache = new DataCache();
+
+    cache.setMultiple([
+      { key: "key1", value: "value1" },
+      { key: "key2", value: "value2" }
+    ]);
+
+    expect(cache.get("key1")).toEqual("value1");
+    expect(cache.get("key2")).toEqual("value2");
+  });
+
+  it("Can get multiple keys", () => {
+    const cache = new DataCache([
+      { key: "key1", value: "value1" },
+      { key: "key2", value: "value2" }
+    ]);
+
+    const res = cache.getMultiple(["key1", "key2"]);
+
+    expect(res["key1"]).toEqual("value1");
+    expect(res["key2"]).toEqual("value2");
+  });
 });
