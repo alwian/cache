@@ -45,6 +45,21 @@ class DataCache {
   remove(key: string) {
     delete this.#data[key];
   }
+
+  pop(key: string) {
+    const item = this.#data[key].value;
+    delete this.#data[key];
+
+    return item;
+  }
+
+  popMultiple(keys: string[]) {
+    const items: Record<string, unknown> = {};
+    keys.forEach((key: string) => {
+      items[key] = this.pop(key);
+    });
+    return items;
+  }
 }
 
 export default DataCache;

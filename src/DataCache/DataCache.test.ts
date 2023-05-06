@@ -68,4 +68,25 @@ describe("DataCache tests", () => {
     expect(res["key1"]).toEqual("value1");
     expect(res["key2"]).toEqual("value2");
   });
+
+  it("Can pop keys", () => {
+    const cache = new DataCache([{ key: "key", value: "value" }]);
+
+    expect(cache.pop("key")).toEqual("value");
+    expect(cache.get("key")).toBeUndefined();
+  });
+
+  it("Can pop multiple keys", () => {
+    const cache = new DataCache([
+      { key: "key1", value: "value1" },
+      { key: "key2", value: "value2" }
+    ]);
+
+    expect(cache.popMultiple(["key1", "key2"])).toEqual({
+      key1: "value1",
+      key2: "value2"
+    });
+    expect(cache.get("key1")).toBeUndefined();
+    expect(cache.get("key2")).toBeUndefined();
+  });
 });
