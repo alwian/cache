@@ -35,6 +35,9 @@ class DataCache {
   }
 
   get(...keys: string[]): unknown | Record<string, unknown> {
+    if (!keys.length) {
+      keys = Object.keys(this.#data);
+    }
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
       items[key] = this.#data[key]?.value;

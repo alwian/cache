@@ -66,6 +66,9 @@ describe("DataCache tests", () => {
     const res = cache.get("key1", "key2");
     expect((res as Record<string, string>)["key1"]).toEqual("value1");
     expect((res as Record<string, string>)["key2"]).toEqual("value2");
+
+    const res2 = cache.get();
+    expect(res2).toEqual(res);
   });
 
   it("Can pop data from the cache", () => {
