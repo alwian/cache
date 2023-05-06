@@ -12,21 +12,19 @@ class DataCache {
     });
   }, 1000);
 
-  constructor(initialData?: Record<string, CacheItem>) {
-    if (initialData) {
-      const timeAdded = Date.now();
-      Object.keys(initialData).forEach((key: string) => {
-        this.#data[key] = { ...initialData[key], timeAdded };
-      });
-    }
+  constructor(initialData?: CacheItem[]) {
+    const timeAdded = Date.now();
+    initialData?.forEach((item: CacheItem) => {
+      this.#data[item.key] = { ...item, timeAdded };
+    });
   }
 
   get(key: string) {
     return this.#data[key]?.value;
   }
 
-  set(key: string, data: CacheItem) {
-    this.#data[key] = { ...data, timeAdded: Date.now() };
+  set(data: CacheItem) {
+    this.#data[data.key] = { ...data, timeAdded: Date.now() };
   }
 
   remove(key: string) {
