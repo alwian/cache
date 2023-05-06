@@ -15,3 +15,9 @@ interface ItemStats {
 interface CacheStats {
   accesses: number;
 }
+
+interface CacheConfig {
+  interval?: number;
+  defaultTtl?: number;
+  initialData?: CacheItem[];
+}

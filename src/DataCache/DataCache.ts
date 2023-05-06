@@ -5,22 +5,33 @@ class DataCache {
     accesses: 0
   };
 
-  #counter = setInterval(() => {
-    const time = Date.now();
+  #config: Omit<CacheConfig, "initialData"> = {
+    interval: 1
+  };
 
-    Object.keys(this.#data).forEach((key: string) => {
-      const ttl = this.#data[key].ttl;
-      if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
-        this.remove(key);
-      }
-    });
-  }, 1000);
-
-  constructor(...initialData: CacheItem[]) {
+  constructor(config?: CacheConfig) {
     const timeAdded = Date.now();
-    initialData?.forEach((item: CacheItem) => {
-      this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
-    });
+
+    if (config) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { initialData, ...otherConfig } = config;
+      this.#config = { ...this.#config, ...otherConfig };
+
+      config.initialData?.forEach((item: CacheItem) => {
+        this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
+      });
+    }
+
+    setInterval(() => {
+      const time = Date.now();
+
+      Object.keys(this.#data).forEach((key: string) => {
+        const ttl = this.#data[key].ttl || this.#config.defaultTtl;
+        if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
+          this.remove(key);
+        }
+      });
+    }, (this.#config.interval as number) * 1000);
   }
 
   get(...keys: string[]): unknown | Record<string, unknown> {
