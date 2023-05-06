@@ -12,52 +12,48 @@ class DataCache {
     });
   }, 1000);
 
-  constructor(initialData?: CacheItem[]) {
+  constructor(...initialData: CacheItem[]) {
     const timeAdded = Date.now();
     initialData?.forEach((item: CacheItem) => {
       this.#data[item.key] = { ...item, timeAdded };
     });
   }
 
-  get(key: string) {
-    return this.#data[key]?.value;
-  }
-
-  getMultiple(keys: string[]) {
+  get(...keys: string[]): unknown | Record<string, unknown> {
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
-      items[key] = this.#data[key].value;
+      items[key] = this.#data[key]?.value;
     });
+
+    if (keys.length === 1) {
+      return items[keys[0]];
+    }
     return items;
   }
 
-  set(data: CacheItem) {
-    this.#data[data.key] = { ...data, timeAdded: Date.now() };
-  }
-
-  setMultiple(items: CacheItem[]) {
+  set(...items: CacheItem[]) {
     const timeAdded = Date.now();
     items.forEach((item: CacheItem) => {
       this.#data[item.key] = { ...item, timeAdded };
     });
   }
 
-  remove(key: string) {
-    delete this.#data[key];
+  remove(...keys: string[]) {
+    keys.forEach((key: string) => {
+      delete this.#data[key];
+    });
   }
 
-  pop(key: string) {
-    const item = this.#data[key].value;
-    delete this.#data[key];
-
-    return item;
-  }
-
-  popMultiple(keys: string[]) {
+  pop(...keys: string[]): unknown | Record<string, unknown> {
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
-      items[key] = this.pop(key);
+      items[key] = this.#data[key]?.value;
+      delete this.#data[key];
     });
+
+    if (keys.length === 1) {
+      return items[keys[0]];
+    }
     return items;
   }
 }
