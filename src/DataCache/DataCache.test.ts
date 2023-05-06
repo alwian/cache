@@ -76,4 +76,31 @@ describe("DataCache tests", () => {
     cache.set({ key: "key3", value: "value3" });
     expect(cache.pop("key3")).toEqual("value3");
   });
+
+  it("Clear the cache", () => {
+    const cache = new DataCache(
+      { key: "key1", value: "value1" },
+      { key: "key2", value: "value2" }
+    );
+    cache.clear();
+
+    expect(cache.get("key1")).toBeUndefined();
+    expect(cache.get("key2")).toBeUndefined();
+  });
+
+  it("Can check for a key", () => {
+    const cache = new DataCache({ key: "key", value: "value" });
+
+    expect(cache.has("key")).toBeTruthy();
+    expect(cache.has("key2")).toBeFalsy();
+  });
+
+  it("Can return a list of keys", () => {
+    const cache = new DataCache(
+      { key: "key1", value: "value1" },
+      { key: "key2", value: "value2" }
+    );
+
+    expect(cache.keys()).toEqual(["key1", "key2"]);
+  });
 });

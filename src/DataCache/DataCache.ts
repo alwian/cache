@@ -56,6 +56,18 @@ class DataCache {
     }
     return items;
   }
+
+  clear() {
+    this.#data = {};
+  }
+
+  has(key: string) {
+    return Object.keys(this.#data).includes(key);
+  }
+
+  keys() {
+    return Object.keys(this.#data);
+  }
 }
 
 export default DataCache;
