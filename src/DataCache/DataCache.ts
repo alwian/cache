@@ -9,6 +9,8 @@ class DataCache {
     interval: 1
   };
 
+  #expiryInterval: NodeJS.Timeout | undefined;
+
   constructor(config?: CacheConfig) {
     const timeAdded = Date.now();
 
@@ -21,17 +23,24 @@ class DataCache {
         this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
       });
     }
+    this.#resetExpiryInterval();
+  }
 
-    setInterval(() => {
-      const time = Date.now();
+  #resetExpiryInterval() {
+    clearInterval(this.#expiryInterval);
 
-      Object.keys(this.#data).forEach((key: string) => {
-        const ttl = this.#data[key].ttl || this.#config.defaultTtl;
-        if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
-          this.remove(key);
-        }
-      });
-    }, (this.#config.interval as number) * 1000);
+    if (this.#config.interval) {
+      this.#expiryInterval = setInterval(() => {
+        const time = Date.now();
+
+        Object.keys(this.#data).forEach((key: string) => {
+          const ttl = this.#data[key].ttl || this.#config.defaultTtl;
+          if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
+            this.remove(key);
+          }
+        });
+      }, (this.#config.interval as number) * 1000);
+    }
   }
 
   get(...keys: string[]): unknown | Record<string, unknown> {
@@ -106,6 +115,24 @@ class DataCache {
     });
 
     return stats;
+  }
+
+  config(config: Omit<CacheConfig, "initialData">) {
+    this.#config = {
+      ...this.#config,
+      ...config
+    };
+    this.#resetExpiryInterval();
+  }
+
+  ttl(ttl: number, ...keys: string[]) {
+    if (!keys.length) {
+      keys = Object.keys(this.#data);
+    }
+
+    Object.values(this.#data).forEach((item: CachedItem) => {
+      item.ttl = ttl;
+    });
   }
 }
 

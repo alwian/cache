@@ -188,4 +188,67 @@ describe("DataCache tests", () => {
     jest.advanceTimersByTime(5000);
     expect(cache.get("key1")).toBeUndefined();
   });
+
+  it("Can accept an updated defaultTtl", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1" }],
+      defaultTtl: 5
+    });
+
+    expect(cache.get("key1")).toEqual("value1");
+    jest.advanceTimersByTime(5000);
+    expect(cache.get("key1")).toBeUndefined();
+
+    cache.config({ defaultTtl: 10 });
+    cache.set({ key: "key2", value: "value2" });
+
+    jest.advanceTimersByTime(8000);
+    expect(cache.get("key2")).toEqual("value2");
+    jest.advanceTimersByTime(2000);
+    expect(cache.get("key2")).toBeUndefined();
+  });
+
+  it("Can accept an updated interval", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
+      interval: 5
+    });
+    expect(cache.get("key1")).toEqual("value1");
+    jest.advanceTimersByTime(5000);
+    expect(cache.get("key1")).toBeUndefined();
+
+    cache.config({ interval: 10 });
+    cache.set({ key: "key2", value: "value2", ttl: 5 });
+
+    jest.advanceTimersByTime(5000);
+    expect(cache.get("key2")).toEqual("value2");
+    jest.advanceTimersByTime(5000);
+    expect(cache.get("key2")).toBeUndefined();
+  });
+
+  it("Can update the ttl of an item(s)", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+
+    jest.advanceTimersByTime(4000);
+    cache.ttl(10, "key1");
+    jest.advanceTimersByTime(1000);
+    expect(cache.get("key1")).toEqual("value1");
+    jest.advanceTimersByTime(5000);
+    expect(cache.get("key1")).toBeUndefined();
+
+    cache.set(
+      { key: "key1", value: "value1", ttl: 5 },
+      { key: "key2", value: "value2", ttl: 5 }
+    );
+    jest.advanceTimersByTime(4000);
+    cache.ttl(10);
+    jest.advanceTimersByTime(1000);
+    expect(cache.get("key1")).toEqual("value1");
+    expect(cache.get("key2")).toEqual("value2");
+    jest.advanceTimersByTime(5000);
+    expect(cache.get("key1")).toBeUndefined();
+    expect(cache.get("key2")).toBeUndefined();
+  });
 });
