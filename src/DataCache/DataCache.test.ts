@@ -326,4 +326,17 @@ describe("DataCache tests", () => {
 
     expect(mock).toHaveBeenCalled();
   });
+
+  it("It can store multiple data types", () => {
+    const cache = new DataCache();
+    cache.set(
+      { key: "key1", value: "value1" },
+      { key: "key2", value: 0 },
+      { key: "key3", value: { field: 1 } }
+    );
+
+    expect(cache.get("key1")).toEqual("value1");
+    expect(cache.get("key2")).toEqual(0);
+    expect(cache.get("key3")).toEqual({ field: 1 });
+  });
 });

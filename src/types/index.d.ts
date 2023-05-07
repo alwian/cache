@@ -1,6 +1,6 @@
 interface CacheItem {
   key: string;
-  value: string;
+  value: unknown;
   ttl?: number;
 }
 
