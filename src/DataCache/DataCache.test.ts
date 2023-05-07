@@ -251,4 +251,79 @@ describe("DataCache tests", () => {
     expect(cache.get("key1")).toBeUndefined();
     expect(cache.get("key2")).toBeUndefined();
   });
+
+  it("Emits an event on set", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache();
+    cache.on("set", (key, value) => {
+      mock(key, value);
+    });
+    cache.set({ key: "key1", value: "value1", ttl: 5 });
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+  });
+
+  it("Emits an event on get", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+    cache.on("get", (key, value) => {
+      mock(key, value);
+    });
+    cache.get("key1");
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+  });
+
+  it("Emits an event on remove", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+    cache.on("remove", (key, value) => {
+      mock(key, value);
+    });
+    cache.remove("key1");
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+  });
+
+  it("Emits an event on pop", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+    cache.on("pop", (key, value) => {
+      mock(key, value);
+    });
+    cache.pop("key1");
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+  });
+
+  it("Emits an event on expire", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+    cache.on("expire", (key, value) => {
+      mock(key, value);
+    });
+    jest.advanceTimersByTime(5000);
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+  });
+
+  it("Emits an event on clear", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache();
+    cache.on("clear", () => {
+      mock();
+    });
+    cache.clear();
+
+    expect(mock).toHaveBeenCalled();
+  });
 });

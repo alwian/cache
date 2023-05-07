@@ -1,4 +1,6 @@
-class DataCache {
+import { EventEmitter } from "events";
+
+class DataCache extends EventEmitter {
   #data: Record<string, CachedItem> = {};
 
   #stats: CacheStats = {
@@ -12,6 +14,7 @@ class DataCache {
   #expiryInterval: NodeJS.Timeout | undefined;
 
   constructor(config?: CacheConfig) {
+    super();
     const timeAdded = Date.now();
 
     if (config) {
@@ -36,7 +39,11 @@ class DataCache {
         Object.keys(this.#data).forEach((key: string) => {
           const ttl = this.#data[key].ttl || this.#config.defaultTtl;
           if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
-            this.remove(key);
+            const keyCopy = key;
+            const valueCopy = this.#data[key]?.value;
+            delete this.#data[key];
+
+            this.emit("expire", keyCopy, valueCopy);
           }
         });
       }, (this.#config.interval as number) * 1000);
@@ -54,6 +61,7 @@ class DataCache {
         this.#data[key].stats.accesses += 1;
         this.#stats.accesses += 1;
       }
+      this.emit("get", key, items[key]);
     });
 
     if (keys.length === 1) {
@@ -66,12 +74,17 @@ class DataCache {
     const timeAdded = Date.now();
     items.forEach((item: CacheItem) => {
       this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
+      this.emit("set", item.key, item.value);
     });
   }
 
   remove(...keys: string[]) {
     keys.forEach((key: string) => {
+      const keyCopy = key;
+      const valueCopy = this.#data[key]?.value;
       delete this.#data[key];
+
+      this.emit("remove", keyCopy, valueCopy);
     });
   }
 
@@ -80,6 +93,8 @@ class DataCache {
     keys.forEach((key: string) => {
       items[key] = this.#data[key]?.value;
       delete this.#data[key];
+
+      this.emit("pop", key, items[key]);
     });
 
     if (keys.length === 1) {
@@ -90,6 +105,7 @@ class DataCache {
 
   clear() {
     this.#data = {};
+    this.emit("clear");
   }
 
   has(key: string) {
