@@ -7,6 +7,7 @@ interface CacheItem {
 interface CachedItem extends CacheItem {
   timeAdded: number;
   stats: ItemStats;
+  expired: boolean;
 }
 
 interface ItemStats {
@@ -20,4 +21,6 @@ interface CacheConfig {
   interval?: number;
   defaultTtl?: number;
   initialData?: CacheItem[];
+  removeOnExpire?: boolean;
+  expireOnce?: boolean;
 }

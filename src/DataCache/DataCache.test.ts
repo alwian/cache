@@ -339,4 +339,83 @@ describe("DataCache tests", () => {
     expect(cache.get("key2")).toEqual(0);
     expect(cache.get("key3")).toEqual({ field: 1 });
   });
+
+  it("Can purge expired items", () => {
+    const mock = jest.fn();
+
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1" }],
+      removeOnExpire: false,
+      defaultTtl: 5
+    });
+    cache.on("expire", (key, value) => {
+      mock(key, value);
+    });
+    jest.advanceTimersByTime(5000);
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+
+    expect(cache.get("key1")).toEqual("value1");
+
+    cache.purge();
+    expect(cache.get("key1")).toBeUndefined();
+  });
+
+  it("Can reset the expiry time of items", () => {
+    const mock = jest.fn();
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
+      removeOnExpire: false,
+      expireOnce: false
+    });
+    cache.on("expire", (key, value) => {
+      mock(key, value);
+    });
+    jest.advanceTimersByTime(5000);
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+    expect(cache.get("key1")).toEqual("value1");
+
+    jest.advanceTimersByTime(1000);
+    expect(mock).toHaveBeenNthCalledWith(2, "key1", "value1");
+    cache.reset();
+    jest.advanceTimersByTime(1000);
+    expect(mock).not.toHaveBeenNthCalledWith(3, "key1", "value1");
+  });
+
+  it("Can restrict items to a single expire event", () => {
+    const mock = jest.fn();
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
+      removeOnExpire: false,
+      expireOnce: true
+    });
+    cache.on("expire", (key, value) => {
+      mock(key, value);
+    });
+    jest.advanceTimersByTime(5000);
+    expect(mock).toHaveBeenCalledWith("key1", "value1");
+    expect(cache.get("key1")).toEqual("value1");
+
+    jest.advanceTimersByTime(1000);
+    expect(mock).not.toHaveBeenNthCalledWith(2, "key1", "value1");
+
+    cache.config({ ...cache.config, expireOnce: false });
+    jest.advanceTimersByTime(1000);
+    expect(mock).toHaveBeenNthCalledWith(2, "key1", "value1");
+  });
+
+  it("Can return an array of values", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+
+    expect(cache.values()).toEqual(["value1"]);
+  });
+
+  it("Can return an array of entries", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+
+    expect(cache.entries()).toEqual([["key1", "value1"]]);
+  });
 });

@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 
-class DataCache extends EventEmitter {
+export default class DataCache extends EventEmitter {
   #data: Record<string, CachedItem> = {};
 
   #stats: CacheStats = {
@@ -8,7 +8,9 @@ class DataCache extends EventEmitter {
   };
 
   #config: Omit<CacheConfig, "initialData"> = {
-    interval: 1
+    interval: 1,
+    removeOnExpire: true,
+    expireOnce: true
   };
 
   #expiryInterval: NodeJS.Timeout | undefined;
@@ -23,7 +25,12 @@ class DataCache extends EventEmitter {
       this.#config = { ...this.#config, ...otherConfig };
 
       config.initialData?.forEach((item: CacheItem) => {
-        this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
+        this.#data[item.key] = {
+          ...item,
+          timeAdded,
+          stats: { accesses: 0 },
+          expired: false
+        };
       });
     }
     this.#resetExpiryInterval();
@@ -37,11 +44,25 @@ class DataCache extends EventEmitter {
         const time = Date.now();
 
         Object.keys(this.#data).forEach((key: string) => {
+          if (this.#data[key].expired && this.#config.expireOnce) {
+            console.log("item is expired");
+            return;
+          }
+
           const ttl = this.#data[key].ttl || this.#config.defaultTtl;
-          if (ttl && time - this.#data[key].timeAdded >= ttl * 1000) {
+          if (
+            this.#data[key].expired ||
+            (ttl && time - this.#data[key].timeAdded >= ttl * 1000)
+          ) {
             const keyCopy = key;
             const valueCopy = this.#data[key]?.value;
-            delete this.#data[key];
+
+            if (this.#config.removeOnExpire) {
+              delete this.#data[key];
+            } else {
+              this.#data[key].expired = true;
+              console.log("Setting expired");
+            }
 
             this.emit("expire", keyCopy, valueCopy);
           }
@@ -52,7 +73,7 @@ class DataCache extends EventEmitter {
 
   get(...keys: string[]): unknown | Record<string, unknown> {
     if (!keys.length) {
-      keys = Object.keys(this.#data);
+      keys = this.keys();
     }
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
@@ -73,7 +94,12 @@ class DataCache extends EventEmitter {
   set(...items: CacheItem[]) {
     const timeAdded = Date.now();
     items.forEach((item: CacheItem) => {
-      this.#data[item.key] = { ...item, timeAdded, stats: { accesses: 0 } };
+      this.#data[item.key] = {
+        ...item,
+        timeAdded,
+        stats: { accesses: 0 },
+        expired: false
+      };
       this.emit("set", item.key, item.value);
     });
   }
@@ -109,7 +135,7 @@ class DataCache extends EventEmitter {
   }
 
   has(key: string) {
-    return Object.keys(this.#data).includes(key);
+    return this.keys().includes(key);
   }
 
   keys() {
@@ -143,13 +169,41 @@ class DataCache extends EventEmitter {
 
   ttl(ttl: number, ...keys: string[]) {
     if (!keys.length) {
-      keys = Object.keys(this.#data);
+      keys = this.keys();
     }
 
     Object.values(this.#data).forEach((item: CachedItem) => {
       item.ttl = ttl;
     });
   }
-}
 
-export default DataCache;
+  purge() {
+    for (const [key, value] of Object.entries(this.#data)) {
+      const ttl = value.ttl || this.#config.defaultTtl;
+      const time = Date.now();
+      if (ttl && time - value.timeAdded >= ttl * 1000) {
+        delete this.#data[key];
+      }
+    }
+  }
+
+  reset(...items: string[]) {
+    if (!items.length) {
+      items = this.keys();
+    }
+
+    const time = Date.now();
+    items.forEach((key: string) => {
+      this.#data[key].timeAdded = time;
+      this.#data[key].expired = false;
+    });
+  }
+
+  values(): unknown[] {
+    return Object.values(this.#data).map((item: CacheItem) => item.value);
+  }
+
+  entries(): [string, unknown][] {
+    return this.keys().map((key: string) => [key, this.#data[key].value]);
+  }
+}
