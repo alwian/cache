@@ -18,9 +18,11 @@ interface CacheStats {
 }
 
 interface CacheConfig {
-  interval?: number;
-  defaultTtl?: number;
+  interval: number;
+  defaultTtl: number;
   initialData?: CacheItem[];
-  removeOnExpire?: boolean;
-  expireOnce?: boolean;
+  removeOnExpire: boolean;
+  expireOnce: boolean;
+  capacity: number;
+  errorOnFull: boolean;
 }

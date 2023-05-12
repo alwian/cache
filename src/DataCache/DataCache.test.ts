@@ -418,4 +418,19 @@ describe("DataCache tests", () => {
 
     expect(cache.entries()).toEqual([["key1", "value1"]]);
   });
+
+  it("Can limit capacity", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
+      capacity: 1
+    });
+
+    cache.set({ key: "key2", value: "value2" });
+    expect(cache.get("key2")).toBeUndefined();
+
+    cache.config({ errorOnFull: true });
+    expect(() => cache.set({ key: "key2", value: "value2" })).toThrowError(
+      "Could not add items as capacity would be exceeded"
+    );
+  });
 });

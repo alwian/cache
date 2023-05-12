@@ -10,12 +10,15 @@ export default class DataCache extends EventEmitter {
   #config: Omit<CacheConfig, "initialData"> = {
     interval: 1,
     removeOnExpire: true,
-    expireOnce: true
+    expireOnce: true,
+    capacity: Infinity,
+    errorOnFull: false,
+    defaultTtl: 0
   };
 
   #expiryInterval: NodeJS.Timeout | undefined;
 
-  constructor(config?: CacheConfig) {
+  constructor(config?: Partial<CacheConfig>) {
     super();
     const timeAdded = Date.now();
 
@@ -92,6 +95,14 @@ export default class DataCache extends EventEmitter {
   }
 
   set(...items: CacheItem[]) {
+    if (this.keys().length + items.length > this.#config.capacity) {
+      if (this.#config.errorOnFull) {
+        throw Error("Could not add items as capacity would be exceeded");
+      } else {
+        return;
+      }
+    }
+
     const timeAdded = Date.now();
     items.forEach((item: CacheItem) => {
       this.#data[item.key] = {
@@ -159,7 +170,7 @@ export default class DataCache extends EventEmitter {
     return stats;
   }
 
-  config(config: Omit<CacheConfig, "initialData">) {
+  config(config: Partial<Omit<CacheConfig, "initialData">>) {
     this.#config = {
       ...this.#config,
       ...config
