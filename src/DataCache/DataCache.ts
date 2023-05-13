@@ -13,7 +13,8 @@ export default class DataCache extends EventEmitter {
     expireOnce: true,
     capacity: Infinity,
     errorOnFull: false,
-    defaultTtl: 0
+    defaultTtl: 0,
+    errorOnMiss: false
   };
 
   #expiryInterval: NodeJS.Timeout | undefined;
@@ -84,6 +85,8 @@ export default class DataCache extends EventEmitter {
       if (this.#data[key] !== undefined) {
         this.#data[key].stats.accesses += 1;
         this.#stats.accesses += 1;
+      } else if (this.#config.errorOnMiss) {
+        throw Error(`Key ${key} is undefined.`);
       }
       this.emit("get", key, items[key]);
     });

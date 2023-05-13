@@ -25,4 +25,5 @@ interface CacheConfig {
   expireOnce: boolean;
   capacity: number;
   errorOnFull: boolean;
+  errorOnMiss: boolean;
 }

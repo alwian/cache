@@ -433,4 +433,10 @@ describe("DataCache tests", () => {
       "Could not add items as capacity would be exceeded"
     );
   });
+
+  it("Throws a error when an item is undefined and errorOnMiss is true", () => {
+    const cache = new DataCache({ errorOnMiss: true });
+
+    expect(() => cache.get("key1")).toThrowError("Key key1 is undefined.");
+  });
 });
