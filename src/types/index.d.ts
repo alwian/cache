@@ -15,6 +15,7 @@ interface ItemStats {
 }
 interface CacheStats {
   accesses: number;
+  misses: number;
 }
 
 interface CacheConfig {

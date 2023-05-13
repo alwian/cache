@@ -439,4 +439,15 @@ describe("DataCache tests", () => {
 
     expect(() => cache.get("key1")).toThrowError("Key key1 is undefined.");
   });
+
+  it("Allows the stats of items to be cleared", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+    });
+
+    cache.get("key1");
+    expect(cache.stats("key1").accesses).toEqual(1);
+    cache.clearStats();
+    expect(cache.stats("key1").accesses).toEqual(0);
+  });
 });

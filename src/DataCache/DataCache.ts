@@ -4,7 +4,8 @@ export default class DataCache extends EventEmitter {
   #data: Record<string, CachedItem> = {};
 
   #stats: CacheStats = {
-    accesses: 0
+    accesses: 0,
+    misses: 0
   };
 
   #config: Omit<CacheConfig, "initialData"> = {
@@ -85,8 +86,12 @@ export default class DataCache extends EventEmitter {
       if (this.#data[key] !== undefined) {
         this.#data[key].stats.accesses += 1;
         this.#stats.accesses += 1;
-      } else if (this.#config.errorOnMiss) {
-        throw Error(`Key ${key} is undefined.`);
+      } else {
+        this.#stats.misses += 1;
+
+        if (this.#config.errorOnMiss) {
+          throw Error(`Key ${key} is undefined.`);
+        }
       }
       this.emit("get", key, items[key]);
     });
@@ -171,6 +176,18 @@ export default class DataCache extends EventEmitter {
     });
 
     return stats;
+  }
+
+  clearStats(...items: string[]) {
+    if (!items.length) {
+      items = this.keys();
+    }
+
+    this.keys().forEach((key: string) => {
+      this.#data[key].stats = {
+        accesses: 0
+      };
+    });
   }
 
   config(config: Partial<Omit<CacheConfig, "initialData">>) {
