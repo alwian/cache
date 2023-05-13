@@ -15,7 +15,8 @@ export default class DataCache extends EventEmitter {
     capacity: Infinity,
     errorOnFull: false,
     defaultTtl: 0,
-    errorOnMiss: false
+    errorOnMiss: false,
+    errorOnDuplicate: false
   };
 
   #expiryInterval: NodeJS.Timeout | undefined;
@@ -103,6 +104,14 @@ export default class DataCache extends EventEmitter {
   }
 
   set(...items: CacheItem[]) {
+    if (this.#config.errorOnDuplicate) {
+      items.forEach((item: CacheItem) => {
+        if (this.#data[item.key] !== undefined) {
+          throw Error(`Cannot add existing key ${item.key}`);
+        }
+      });
+    }
+
     if (this.keys().length + items.length > this.#config.capacity) {
       if (this.#config.errorOnFull) {
         throw Error("Could not add items as capacity would be exceeded");

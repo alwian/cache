@@ -27,4 +27,5 @@ interface CacheConfig {
   capacity: number;
   errorOnFull: boolean;
   errorOnMiss: boolean;
+  errorOnDuplicate: boolean;
 }

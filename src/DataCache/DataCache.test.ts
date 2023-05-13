@@ -450,4 +450,15 @@ describe("DataCache tests", () => {
     cache.clearStats();
     expect(cache.stats("key1").accesses).toEqual(0);
   });
+
+  it("Can throw an error when duplicate keys are added", () => {
+    const cache = new DataCache({
+      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
+      errorOnDuplicate: true
+    });
+
+    expect(() => cache.set({ key: "key1", value: "value2" })).toThrowError(
+      "Cannot add existing key key1"
+    );
+  });
 });
