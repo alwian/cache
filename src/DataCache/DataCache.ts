@@ -51,7 +51,6 @@ export default class DataCache extends EventEmitter {
 
         Object.keys(this.#data).forEach((key: string) => {
           if (this.#data[key].expired && this.#config.expireOnce) {
-            console.log("item is expired");
             return;
           }
 
@@ -67,7 +66,6 @@ export default class DataCache extends EventEmitter {
               delete this.#data[key];
             } else {
               this.#data[key].expired = true;
-              console.log("Setting expired");
             }
 
             this.emit("expire", keyCopy, valueCopy);
@@ -77,6 +75,14 @@ export default class DataCache extends EventEmitter {
     }
   }
 
+  /**
+   * Retrieve items from the cache.
+   *
+   * A `get` event is triggered for each item retrieved.
+   *
+   * @param keys The keys to return. If no keys are specified then all items will be returned.
+   * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
+   */
   get(...keys: string[]): unknown | Record<string, unknown> {
     if (!keys.length) {
       keys = this.keys();
@@ -103,6 +109,13 @@ export default class DataCache extends EventEmitter {
     return items;
   }
 
+  /**
+   * Add items to the cache.
+   *
+   * A `set` event is triggered for each item added.
+   *
+   * @param items The items to store.
+   */
   set(...items: CacheItem[]) {
     if (this.#config.errorOnDuplicate) {
       items.forEach((item: CacheItem) => {
@@ -132,7 +145,18 @@ export default class DataCache extends EventEmitter {
     });
   }
 
+  /**
+   * Remove items from the cache.
+   *
+   * A `remove` event is emitted for each item removed.
+   *
+   * @param keys The keys of the items to remove. If not keys specified then all items will be removed.
+   */
   remove(...keys: string[]) {
+    if (!keys.length) {
+      keys = this.keys();
+    }
+
     keys.forEach((key: string) => {
       const keyCopy = key;
       const valueCopy = this.#data[key]?.value;
@@ -142,6 +166,14 @@ export default class DataCache extends EventEmitter {
     });
   }
 
+  /**
+   * Retrieve and remove items from the cache.
+   *
+   * A `pop` event is triggered for each item retrieved.
+   *
+   * @param keys The keys to retrieve. If no keys are specified then all items will be returned.
+   * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
+   */
   pop(...keys: string[]): unknown | Record<string, unknown> {
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
@@ -157,19 +189,40 @@ export default class DataCache extends EventEmitter {
     return items;
   }
 
+  /**
+   * Remove all items from the cache.
+   *
+   * Emits a `clear` event when called.
+   */
   clear() {
     this.#data = {};
     this.emit("clear");
   }
 
+  /**
+   * Check whether a key exists in the cache.
+   *
+   * @param key The key to check.
+   * @returns Whether the given key exists in the cache.
+   */
   has(key: string) {
     return this.keys().includes(key);
   }
 
+  /**
+   * Get all keys in the cache.
+   * @returns The keys that exist in the cache.
+   */
   keys() {
     return Object.keys(this.#data);
   }
 
+  /**
+   * Get the stats for items in the cache.
+   *
+   * @param keys The keys to retrieve stats for.
+   * @returns Either the stats for a given key, an object containing stats for each key provided is >1 specified, or cumulative stats for the entire cache if no keys given.
+   */
   stats(...keys: string[]): CacheStats | ItemStats | Record<string, ItemStats> {
     if (!keys.length) {
       return this.#stats;
@@ -187,6 +240,11 @@ export default class DataCache extends EventEmitter {
     return stats;
   }
 
+  /**
+   * Reset the stats of items.
+   *
+   * @param items The keys to reset the stats of. If no keys specified all items will be reset.
+   */
   clearStats(...items: string[]) {
     if (!items.length) {
       items = this.keys();
@@ -199,7 +257,12 @@ export default class DataCache extends EventEmitter {
     });
   }
 
-  config(config: Partial<Omit<CacheConfig, "initialData">>) {
+  /**
+   * Update the config used by the cache.
+   *
+   * @param config A new config to merge with the current config.
+   */
+  config(config: Partial<Omit<CacheConfig, "initialData">>): void {
     this.#config = {
       ...this.#config,
       ...config
@@ -207,6 +270,12 @@ export default class DataCache extends EventEmitter {
     this.#resetExpiryInterval();
   }
 
+  /**
+   * Update the ttl of an item.
+   *
+   * @param ttl The new ttl to use.
+   * @param keys The items to update. If no items specified then all items will be affected.
+   */
   ttl(ttl: number, ...keys: string[]) {
     if (!keys.length) {
       keys = this.keys();
@@ -217,6 +286,11 @@ export default class DataCache extends EventEmitter {
     });
   }
 
+  /**
+   * Remove all expired data from the cache.
+   *
+   * Useful for when `removeOnExpire` is `false` but you want to remove expired data.
+   */
   purge() {
     for (const [key, value] of Object.entries(this.#data)) {
       const ttl = value.ttl || this.#config.defaultTtl;
@@ -227,7 +301,12 @@ export default class DataCache extends EventEmitter {
     }
   }
 
-  reset(...items: string[]) {
+  /**
+   * Resets the time before an item expires.
+   *
+   * @param items The items to reset. If no keys specified all items will be affected.
+   */
+  resetExpiry(...items: string[]) {
     if (!items.length) {
       items = this.keys();
     }
@@ -239,10 +318,20 @@ export default class DataCache extends EventEmitter {
     });
   }
 
+  /**
+   * Get each value stored in the cache.
+   *
+   * @returns An array containing each value stored.
+   */
   values(): unknown[] {
     return Object.values(this.#data).map((item: CacheItem) => item.value);
   }
 
+  /**
+   * Get each key/value pair stored in the cache.
+   *
+   * @returns An array in the format of `[[key, value],...]`.
+   */
   entries(): [string, unknown][] {
     return this.keys().map((key: string) => [key, this.#data[key].value]);
   }

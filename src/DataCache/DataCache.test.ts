@@ -17,6 +17,14 @@ describe("DataCache tests", () => {
 
     cache.remove("testKey");
     expect(cache.get("testKey")).toEqual(undefined);
+
+    cache.set(
+      { key: "testKey", value: "testValue" },
+      { key: "testKey2", value: "testValue2" }
+    );
+    cache.remove();
+    expect(cache.get("key")).toBeUndefined();
+    expect(cache.get("key2")).toBeUndefined();
   });
 
   it("Automatically deletes data when a ttl is specified", () => {
@@ -376,7 +384,7 @@ describe("DataCache tests", () => {
 
     jest.advanceTimersByTime(1000);
     expect(mock).toHaveBeenNthCalledWith(2, "key1", "value1");
-    cache.reset();
+    cache.resetExpiry();
     jest.advanceTimersByTime(1000);
     expect(mock).not.toHaveBeenNthCalledWith(3, "key1", "value1");
   });
