@@ -147,7 +147,6 @@ describe("DataCache tests", () => {
       (cache.stats("key1", "key2") as Record<string, ItemStats>)["key2"]
         .accesses
     ).toEqual(1);
-    expect(cache.stats().accesses).toEqual(3);
   });
 
   it("Accepts a default ttl", () => {

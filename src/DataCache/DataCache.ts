@@ -116,7 +116,7 @@ export default class DataCache extends EventEmitter {
    *
    * @param items The items to store.
    */
-  set(...items: CacheItem[]) {
+  set(...items: CacheItem[]): void {
     if (this.#config.errorOnDuplicate) {
       items.forEach((item: CacheItem) => {
         if (this.#data[item.key] !== undefined) {
@@ -152,7 +152,7 @@ export default class DataCache extends EventEmitter {
    *
    * @param keys The keys of the items to remove. If not keys specified then all items will be removed.
    */
-  remove(...keys: string[]) {
+  remove(...keys: string[]): void {
     if (!keys.length) {
       keys = this.keys();
     }
@@ -175,11 +175,20 @@ export default class DataCache extends EventEmitter {
    * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
    */
   pop(...keys: string[]): unknown | Record<string, unknown> {
+    if (!keys.length) {
+      keys = this.keys();
+    }
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
-      items[key] = this.#data[key]?.value;
-      delete this.#data[key];
+      if (this.#config.errorOnMiss && !this.#data[key]) {
+        throw Error(`Key ${key} is undefined.`);
+      }
 
+      items[key] = this.#data[key]?.value;
+    });
+
+    Object.keys(items).forEach((key: string) => {
+      delete this.#data[key];
       this.emit("pop", key, items[key]);
     });
 
@@ -194,7 +203,7 @@ export default class DataCache extends EventEmitter {
    *
    * Emits a `clear` event when called.
    */
-  clear() {
+  clear(): void {
     this.#data = {};
     this.emit("clear");
   }
@@ -205,7 +214,7 @@ export default class DataCache extends EventEmitter {
    * @param key The key to check.
    * @returns Whether the given key exists in the cache.
    */
-  has(key: string) {
+  has(key: string): boolean {
     return this.keys().includes(key);
   }
 
@@ -213,7 +222,7 @@ export default class DataCache extends EventEmitter {
    * Get all keys in the cache.
    * @returns The keys that exist in the cache.
    */
-  keys() {
+  keys(): string[] {
     return Object.keys(this.#data);
   }
 
@@ -223,9 +232,9 @@ export default class DataCache extends EventEmitter {
    * @param keys The keys to retrieve stats for.
    * @returns Either the stats for a given key, an object containing stats for each key provided is >1 specified, or cumulative stats for the entire cache if no keys given.
    */
-  stats(...keys: string[]): CacheStats | ItemStats | Record<string, ItemStats> {
+  stats(...keys: string[]): ItemStats | Record<string, ItemStats> {
     if (!keys.length) {
-      return this.#stats;
+      keys = this.keys();
     }
 
     if (keys.length === 1) {
@@ -243,11 +252,11 @@ export default class DataCache extends EventEmitter {
   /**
    * Reset the stats of items.
    *
-   * @param items The keys to reset the stats of. If no keys specified all items will be reset.
+   * @param keys The keys to reset the stats of. If no keys specified all items will be reset.
    */
-  clearStats(...items: string[]) {
-    if (!items.length) {
-      items = this.keys();
+  clearStats(...keys: string[]): void {
+    if (!keys.length) {
+      keys = this.keys();
     }
 
     this.keys().forEach((key: string) => {
@@ -276,7 +285,7 @@ export default class DataCache extends EventEmitter {
    * @param ttl The new ttl to use.
    * @param keys The items to update. If no items specified then all items will be affected.
    */
-  ttl(ttl: number, ...keys: string[]) {
+  ttl(ttl: number, ...keys: string[]): void {
     if (!keys.length) {
       keys = this.keys();
     }
@@ -291,7 +300,7 @@ export default class DataCache extends EventEmitter {
    *
    * Useful for when `removeOnExpire` is `false` but you want to remove expired data.
    */
-  purge() {
+  purge(): void {
     for (const [key, value] of Object.entries(this.#data)) {
       const ttl = value.ttl || this.#config.defaultTtl;
       const time = Date.now();
@@ -304,15 +313,15 @@ export default class DataCache extends EventEmitter {
   /**
    * Resets the time before an item expires.
    *
-   * @param items The items to reset. If no keys specified all items will be affected.
+   * @param keys The items to reset. If no keys specified all items will be affected.
    */
-  resetExpiry(...items: string[]) {
-    if (!items.length) {
-      items = this.keys();
+  resetExpiry(...keys: string[]): void {
+    if (!keys.length) {
+      keys = this.keys();
     }
 
     const time = Date.now();
-    items.forEach((key: string) => {
+    keys.forEach((key: string) => {
       this.#data[key].timeAdded = time;
       this.#data[key].expired = false;
     });
