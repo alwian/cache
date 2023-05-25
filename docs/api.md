@@ -26,6 +26,7 @@ Some operations trigger events which you can listen for an act upon. See [Events
   - [`resetExpiry(...keys: string[]): void`](#resetexpirykeys-string-void)
   - [`values(): unknown[]`](#values-unknown)
   - [`entries(): [string, unknown][]`](#entries-string-unknown)
+  - [`size(): number`](#size-number)
 - [Events](#events)
   - [`set`](#set)
   - [`get`](#get)
@@ -85,7 +86,7 @@ cache.set({ key: "key1", value: "key2" }, { key: "key2", value: "value2" });
 
 Has the potential to throw an error if -
 
-- [`capacity`](../README.md#configuration) is set, [`errorOnFull`](../README.md#configuration) is `true` and the number of items being added would exceed capacity. In this case no items would be added before the erros is thrown.
+- [`capacity`](../README.md#configuration) is set, [`errorOnFull`](../README.md#configuration) is `true` and the number of items being added would exceed capacity. In this case no items would be added before the error is thrown.
 - [`errorOnDuplicate`](../README.md#configuration) is `true` and an item is being added with a key that already exists in the cache.
 
 ### `get(...keys: string[]): unknown | Record<string,unknown>`
@@ -94,7 +95,7 @@ Use this to retrieve items from the cache.
 
 There are 3 potential ways this method can return -
 
-- If no keys are provided then all items will be returned in an object containing each `key`/`value` pair. If there is only a single key in the cache then the corresponding value will be returned on it's own.
+- If no keys are provided then all items will be returned in an object containing each `key`/`value` pair.
 - If a single key is provided then the corresponding value will be returned on it's own.
 - If multiple keys are provided an object containing each `key`/`value` pair will be returned.
 
@@ -115,7 +116,7 @@ cache.get("key4"); // undefined
 
 Has the potential to throw an error if -
 
-- [`errorOnMiss`](../README.md#configuration) is `true` and a key is reauested that doesn't exist.
+- [`errorOnMiss`](../README.md#configuration) is `true` and a key is requested that doesn't exist.
 
 ### `pop(...keys: string[]): unknown | Record<string, unknown>`
 
@@ -171,6 +172,10 @@ cache.get("key1", "key2"); // { key1: undefined, key2: undefined }
 cache.remove();
 cache.get(); // { key1: undefined, key2: undefined, key3: undefined }
 ```
+
+Has the potential to throw an error if -
+
+- [`errorOnMiss`](../README.md#configuration) is `true` and a key is passed that doesn't exist. In this case no items will have been removed.
 
 ### `clear(): void`
 
@@ -273,6 +278,10 @@ cache.clear();
 cache.stats(); // { key1: { accesses: 0 }, key2: { accesses: 0 } }
 ```
 
+Has the potential to throw an error if -
+
+- [`errorOnMiss`](../README.md#configuration) is `true` and a key is passed that doesn't exist. In this case no items will have been modified.
+
 ### `config(config: Partial<Omit<CacheConfig, "initialData">>): void`
 
 Update the config being used by the cache.
@@ -307,6 +316,10 @@ cache.ttl(10, "key1"); // key1 will now expire 10 seconds after it was added.
 cache.ttl(15); // key1 and key2 will now expire 15 seconds after they were added.
 ```
 
+Has the potential to throw an error if -
+
+- [`errorOnMiss`](../README.md#configuration) is `true` and a key is passed that doesn't exist. In this case no items will have been modified.
+
 ### `purge(): void`
 
 Remove expire items from the cache.
@@ -335,7 +348,7 @@ This method resets the time at which an item was added to the cache, restarting 
 
 There are 2 ways to use this method -
 
-- Passing in 1 or more keys will reset the expory for the specified keys.
+- Passing in 1 or more keys will reset the expiry for the specified keys.
 - If no keys are passed in then all items are reset.
 
 ```ts
@@ -354,6 +367,10 @@ const cache = new DataCache({
 cache.resetExpiry("key1"); // key1 no longer expired and will expire in 10 seconds
 cache.resetExpiry(); // All keys have been reset and will expire in the relevant number of seconds
 ```
+
+Has the potential to throw an error if -
+
+- [`errorOnMiss`](../README.md#configuration) is `true` and a key is passed that doesn't exist. In this case no items will have been modified.
 
 ### `values(): unknown[]`
 
@@ -385,6 +402,22 @@ const cache = new DataCache({
 });
 
 cache.entries(); // [["key1", "value1"], ["key2", "value2"], ["key3", "value3"]]
+```
+
+### `size(): number`
+
+Get each `key`/`value` pair stored in the cache.
+
+```ts
+const cache = new DataCache({
+  initialData: [
+    { key: "key1", value: "value1" },
+    { key: "key2", value: "value2" },
+    { key: "key3", value: "value3" }
+  ]
+});
+
+cache.size(); // 3
 ```
 
 ## Events

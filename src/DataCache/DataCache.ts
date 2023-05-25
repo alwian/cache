@@ -17,6 +17,11 @@ export default class DataCache extends EventEmitter {
 
   #expiryInterval: NodeJS.Timeout | undefined;
 
+  /**
+   * Create a cache.
+   *
+   * @param config Custom config to use.
+   */
   constructor(config?: Partial<CacheConfig>) {
     super();
     const timeAdded = Date.now();
@@ -222,6 +227,7 @@ export default class DataCache extends EventEmitter {
 
   /**
    * Get all keys in the cache.
+   *
    * @returns The keys that exist in the cache.
    */
   keys(): string[] {
