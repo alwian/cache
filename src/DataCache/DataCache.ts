@@ -1,12 +1,8 @@
 import { EventEmitter } from "events";
+import { checkDuplicateKeys, checkMissingKeys } from "../utils";
 
 export default class DataCache extends EventEmitter {
   #data: Record<string, CachedItem> = {};
-
-  #stats: CacheStats = {
-    accesses: 0,
-    misses: 0
-  };
 
   #config: Omit<CacheConfig, "initialData"> = {
     interval: 1,
@@ -84,28 +80,28 @@ export default class DataCache extends EventEmitter {
    * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
    */
   get(...keys: string[]): unknown | Record<string, unknown> {
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
+    }
+
     if (!keys.length) {
       keys = this.keys();
+    } else if (keys.length === 1) {
+      if (this.#data[keys[0]]) {
+        this.#data[keys[0]].stats.accesses += 1;
+      }
+      this.emit("get", keys[0], this.#data[keys[0]]?.value);
+      return this.#data[keys[0]]?.value;
     }
+
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
-      items[key] = this.#data[key]?.value;
-      if (this.#data[key] !== undefined) {
-        this.#data[key].stats.accesses += 1;
-        this.#stats.accesses += 1;
-      } else {
-        this.#stats.misses += 1;
-
-        if (this.#config.errorOnMiss) {
-          throw Error(`Key ${key} is undefined.`);
-        }
+      if (this.#data[key]) {
+        items[key] = this.#data[key]?.value;
+        if (items[key]) this.#data[key].stats.accesses += 1;
       }
-      this.emit("get", key, items[key]);
+      this.emit("get", key, this.#data[key]?.value);
     });
-
-    if (keys.length === 1) {
-      return items[keys[0]];
-    }
     return items;
   }
 
@@ -118,23 +114,25 @@ export default class DataCache extends EventEmitter {
    */
   set(...items: CacheItem[]): void {
     if (this.#config.errorOnDuplicate) {
-      items.forEach((item: CacheItem) => {
-        if (this.#data[item.key] !== undefined) {
-          throw Error(`Cannot add existing key ${item.key}`);
-        }
-      });
+      checkDuplicateKeys(
+        this.keys(),
+        items.map((item: CacheItem) => item.key)
+      );
     }
 
-    if (this.keys().length + items.length > this.#config.capacity) {
-      if (this.#config.errorOnFull) {
-        throw Error("Could not add items as capacity would be exceeded");
-      } else {
-        return;
-      }
+    if (
+      this.keys().length + items.length > this.#config.capacity &&
+      this.#config.errorOnFull
+    ) {
+      throw Error("Could not add items as capacity would be exceeded.");
     }
 
     const timeAdded = Date.now();
-    items.forEach((item: CacheItem) => {
+    for (const item of items) {
+      if (this.size() === this.#config.capacity) {
+        break;
+      }
+
       this.#data[item.key] = {
         ...item,
         timeAdded,
@@ -142,7 +140,7 @@ export default class DataCache extends EventEmitter {
         expired: false
       };
       this.emit("set", item.key, item.value);
-    });
+    }
   }
 
   /**
@@ -153,6 +151,10 @@ export default class DataCache extends EventEmitter {
    * @param keys The keys of the items to remove. If not keys specified then all items will be removed.
    */
   remove(...keys: string[]): void {
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
+    }
+
     if (!keys.length) {
       keys = this.keys();
     }
@@ -175,26 +177,26 @@ export default class DataCache extends EventEmitter {
    * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
    */
   pop(...keys: string[]): unknown | Record<string, unknown> {
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
+    }
+
     if (!keys.length) {
       keys = this.keys();
+    } else if (keys.length === 1) {
+      const value = this.#data[keys[0]]?.value;
+      delete this.#data[keys[0]];
+      this.emit("pop", keys[0], value);
+      return value;
     }
+
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
-      if (this.#config.errorOnMiss && !this.#data[key]) {
-        throw Error(`Key ${key} is undefined.`);
-      }
-
       items[key] = this.#data[key]?.value;
-    });
-
-    Object.keys(items).forEach((key: string) => {
       delete this.#data[key];
       this.emit("pop", key, items[key]);
     });
 
-    if (keys.length === 1) {
-      return items[keys[0]];
-    }
     return items;
   }
 
@@ -233,17 +235,21 @@ export default class DataCache extends EventEmitter {
    * @returns Either the stats for a given key, an object containing stats for each key provided is >1 specified, or cumulative stats for the entire cache if no keys given.
    */
   stats(...keys: string[]): ItemStats | Record<string, ItemStats> {
-    if (!keys.length) {
-      keys = this.keys();
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
     }
 
-    if (keys.length === 1) {
-      return this.#data[keys[0]].stats;
+    if (!keys.length) {
+      keys = this.keys();
+    } else if (keys.length === 1) {
+      return this.#data[keys[0]]?.stats;
     }
 
     const stats: Record<string, ItemStats> = {};
     keys.forEach((key: string) => {
-      stats[key] = this.#data[key].stats;
+      if (this.#data[key]) {
+        stats[key] = this.#data[key].stats;
+      }
     });
 
     return stats;
@@ -255,6 +261,10 @@ export default class DataCache extends EventEmitter {
    * @param keys The keys to reset the stats of. If no keys specified all items will be reset.
    */
   clearStats(...keys: string[]): void {
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
+    }
+
     if (!keys.length) {
       keys = this.keys();
     }
@@ -286,6 +296,10 @@ export default class DataCache extends EventEmitter {
    * @param keys The items to update. If no items specified then all items will be affected.
    */
   ttl(ttl: number, ...keys: string[]): void {
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
+    }
+
     if (!keys.length) {
       keys = this.keys();
     }
@@ -316,14 +330,20 @@ export default class DataCache extends EventEmitter {
    * @param keys The items to reset. If no keys specified all items will be affected.
    */
   resetExpiry(...keys: string[]): void {
+    if (this.#config.errorOnMiss) {
+      checkMissingKeys(this.keys(), keys);
+    }
+
     if (!keys.length) {
       keys = this.keys();
     }
 
     const time = Date.now();
     keys.forEach((key: string) => {
-      this.#data[key].timeAdded = time;
-      this.#data[key].expired = false;
+      if (this.#data[key]) {
+        this.#data[key].timeAdded = time;
+        this.#data[key].expired = false;
+      }
     });
   }
 
@@ -343,5 +363,12 @@ export default class DataCache extends EventEmitter {
    */
   entries(): [string, unknown][] {
     return this.keys().map((key: string) => [key, this.#data[key].value]);
+  }
+
+  /**
+   * Get the number of items in the cache.
+   */
+  size(): number {
+    return this.keys().length;
   }
 }
