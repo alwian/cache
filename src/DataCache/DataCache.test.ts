@@ -1,471 +1,629 @@
+import { describe } from "node:test";
 import DataCache from ".";
 
 jest.useFakeTimers();
 
 describe("DataCache tests", () => {
-  it("Allows the user to add data", () => {
-    const cache = new DataCache();
-    cache.set({ key: "testKey", value: "testValue" });
-
-    expect(cache.get("testKey")).toEqual("testValue");
-  });
-
-  it("Allows the user to remove data", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "testKey", value: "testValue" }]
+  describe("get tests", () => {
+    it("Can retrieve a single item from the cache", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+      expect(cache.get("key1")).toEqual("value1");
     });
 
-    cache.remove("testKey");
-    expect(cache.get("testKey")).toEqual(undefined);
-
-    cache.set(
-      { key: "testKey", value: "testValue" },
-      { key: "testKey2", value: "testValue2" }
-    );
-    cache.remove();
-    expect(cache.get("key")).toBeUndefined();
-    expect(cache.get("key2")).toBeUndefined();
-  });
-
-  it("Automatically deletes data when a ttl is specified", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "testKey", value: "testValue", ttl: 5 }]
+    it("Can retrieve a multiple items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.get("key1", "key2")).toEqual({
+        key1: "value1",
+        key2: "value2"
+      });
     });
 
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("testKey")).toEqual(undefined);
-  });
-
-  it("Clears and resets (if a ttl is given) a timeout if data is updated", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "testKey", value: "testValue", ttl: 5 }]
+    it("Can retrieve all items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.get()).toEqual({
+        key1: "value1",
+        key2: "value2"
+      });
     });
-    cache.set({ key: "testKey", value: "newTestValue", ttl: 10 });
 
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("testKey")).toEqual("newTestValue");
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({
+        errorOnMiss: true
+      });
 
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("testKey")).toEqual(undefined);
+      expect(() => cache.get("key1", "key2")).toThrowError(
+        "The following keys do not exist on the cache - key1,key2"
+      );
+    });
+
+    it("Doesn't throw an error when errorOnMiss is true", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      expect(cache.get("key1", "key2")).toEqual({ key1: "value1" });
+    });
+
+    it("Emits a get event when items are retrieved", () => {
+      const mockFn = jest.fn();
+
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      cache.on("get", (key, value) => {
+        mockFn(key, value);
+      });
+
+      cache.get("key1", "key2");
+
+      expect(mockFn).toHaveBeenNthCalledWith(1, "key1", "value1");
+      expect(mockFn).toHaveBeenNthCalledWith(2, "key2", "value2");
+    });
   });
 
-  it("Can insert data", () => {
-    const cache = new DataCache();
+  describe("set tests", () => {
+    it("Can add items to the cache", () => {
+      const cache = new DataCache();
+      cache.set({ key: "key1", value: "value1" });
+      expect(cache.get("key1")).toEqual("value1");
+    });
 
-    cache.set(
-      { key: "key1", value: "value1" },
-      { key: "key2", value: "value2" }
-    );
+    it("Throws an error when errorOnDuplicate is true", () => {
+      const cache = new DataCache({ errorOnDuplicate: true });
+      cache.set({ key: "key1", value: "value1" });
+      expect(() =>
+        cache.set(
+          { key: "key1", value: "value2" },
+          { key: "key3", value: "value3" }
+        )
+      ).toThrowError("The following keys already exist in the cache - key1");
+      expect(cache.get("key3")).toBeUndefined();
+    });
 
-    expect(cache.get("key1")).toEqual("value1");
-    expect(cache.get("key2")).toEqual("value2");
-  });
+    it("Overwites items when errorOnDuplicate is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+      cache.set(
+        { key: "key1", value: "value2" },
+        { key: "key2", value: "value3" }
+      );
+      expect(cache.get("key1", "key2")).toEqual({
+        key1: "value2",
+        key2: "value3"
+      });
+    });
 
-  it("Can retrieve data", () => {
-    const cache = new DataCache({
-      initialData: [
+    it("Throws an error when errorOnFull is true", () => {
+      const cache = new DataCache({ errorOnFull: true, capacity: 0 });
+      expect(() => cache.set({ key: "key1", value: "value1" })).toThrowError(
+        "Could not add items as capacity would be exceeded"
+      );
+    });
+
+    it("Allows items to be added up to capacity when errorOnFull is false", () => {
+      const cache = new DataCache({ capacity: 1 });
+      cache.set(
         { key: "key1", value: "value1" },
         { key: "key2", value: "value2" }
-      ]
+      );
+
+      expect(cache.get("key1")).toEqual("value1");
+      expect(cache.get("key2")).toBeUndefined();
     });
 
-    expect(cache.get("key1")).toEqual("value1");
+    it("Emits a set event for each item added", () => {
+      const mockFn = jest.fn();
 
-    const res = cache.get("key1", "key2");
-    expect((res as Record<string, string>)["key1"]).toEqual("value1");
-    expect((res as Record<string, string>)["key2"]).toEqual("value2");
+      const cache = new DataCache();
+      cache.on("set", (key, value) => {
+        mockFn(key, value);
+      });
 
-    const res2 = cache.get();
-    expect(res2).toEqual(res);
-  });
-
-  it("Can pop data from the cache", () => {
-    const cache = new DataCache({
-      initialData: [
+      cache.set(
         { key: "key1", value: "value1" },
         { key: "key2", value: "value2" }
-      ]
-    });
+      );
 
-    expect(cache.pop("key1", "key2")).toEqual({
-      key1: "value1",
-      key2: "value2"
+      expect(mockFn).toHaveBeenNthCalledWith(1, "key1", "value1");
+      expect(mockFn).toHaveBeenNthCalledWith(2, "key2", "value2");
     });
-    expect(cache.get("key1")).toBeUndefined();
-    expect(cache.get("key2")).toBeUndefined();
-
-    cache.set({ key: "key3", value: "value3" });
-    expect(cache.pop("key3")).toEqual("value3");
   });
 
-  it("Clear the cache", () => {
-    const cache = new DataCache({
-      initialData: [
-        { key: "key1", value: "value1" },
-        { key: "key2", value: "value2" }
-      ]
+  describe("remove tests", () => {
+    it("Can remove items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+      expect(cache.get("key1")).toEqual("value1");
+      cache.remove("key1");
+      expect(cache.get("key1")).toBeUndefined();
     });
-    cache.clear();
 
-    expect(cache.get("key1")).toBeUndefined();
-    expect(cache.get("key2")).toBeUndefined();
+    it("Can remove all items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.get("key1")).toEqual("value1");
+      expect(cache.get("key2")).toEqual("value2");
+      cache.remove();
+      expect(cache.get("key1")).toBeUndefined();
+      expect(cache.get("key2")).toBeUndefined();
+    });
+
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({ errorOnMiss: true });
+      expect(() => cache.remove("key1")).toThrow(
+        "The following keys do not exist on the cache - key1"
+      );
+    });
+
+    it("Doesn't throw an error when errorOnMiss is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      cache.remove("key1", "key2");
+      expect(cache.get("key1")).toBeUndefined();
+    });
+
+    it("Emits a remove event for each item removed", () => {
+      const mockFn = jest.fn();
+
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      cache.on("remove", (key, value) => {
+        mockFn(key, value);
+      });
+
+      cache.remove();
+
+      expect(mockFn).toHaveBeenNthCalledWith(1, "key1", "value1");
+      expect(mockFn).toHaveBeenNthCalledWith(2, "key2", "value2");
+    });
   });
 
-  it("Can check for a key", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key", value: "value" }]
+  describe("pop tests", () => {
+    it("Can pop items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+      expect(cache.pop("key1")).toEqual("value1");
+      expect(cache.pop("key1")).toEqual(undefined);
     });
 
-    expect(cache.has("key")).toBeTruthy();
-    expect(cache.has("key2")).toBeFalsy();
+    it("Can pop multiple items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.pop("key1", "key2")).toEqual({
+        key1: "value1",
+        key2: "value2"
+      });
+      expect(cache.pop("key1", "key2")).toEqual({
+        key1: undefined,
+        key2: undefined
+      });
+    });
+
+    it("Can pop all items from the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.pop()).toEqual({ key1: "value1", key2: "value2" });
+      expect(cache.pop()).toEqual({ key1: undefined, key2: undefined });
+    });
+
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ],
+        errorOnMiss: true
+      });
+      expect(() => cache.pop("key1", "key3")).toThrowError(
+        "The following keys do not exist on the cache - key3"
+      );
+    });
+
+    it("Doesn't throw an error when errorOnMiss is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+      expect(cache.pop("key1", "key2")).toEqual({ key1: "value1" });
+    });
+
+    it("Emits a pop event for each item removed", () => {
+      const mockFn = jest.fn();
+
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      cache.on("pop", (key, value) => {
+        mockFn(key, value);
+      });
+
+      cache.pop();
+
+      expect(mockFn).toHaveBeenNthCalledWith(1, "key1", "value1");
+      expect(mockFn).toHaveBeenNthCalledWith(2, "key2", "value2");
+    });
   });
 
-  it("Can return a list of keys", () => {
-    const cache = new DataCache({
-      initialData: [
-        { key: "key1", value: "value1" },
-        { key: "key2", value: "value2" }
-      ]
+  describe("clear tests", () => {
+    it("Can clear the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+
+      expect(cache.get()).toEqual({ key1: "value1", key2: "value2" });
+      cache.clear();
+      expect(cache.get()).toEqual({});
     });
 
-    expect(cache.keys()).toEqual(["key1", "key2"]);
+    it("Emits a clear even when called", () => {
+      const mockFn = jest.fn();
+
+      const cache = new DataCache();
+      cache.on("clear", () => {
+        mockFn();
+      });
+      cache.clear();
+      expect(mockFn).toHaveBeenCalled();
+    });
   });
 
-  it("Records access counts for each key", () => {
-    const cache = new DataCache({
-      initialData: [
-        { key: "key1", value: "value1" },
-        { key: "key2", value: "value2" }
-      ]
+  describe("has tests", () => {
+    it("Can check if a key exists", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      expect(cache.has("key1")).toEqual(true);
+      expect(cache.has("key2")).toEqual(false);
     });
-
-    cache.get("key1", "key2");
-    cache.get("key1");
-
-    expect(cache.stats("key1").accesses).toEqual(2);
-    expect(
-      (cache.stats("key1", "key2") as Record<string, ItemStats>)["key2"]
-        .accesses
-    ).toEqual(1);
   });
 
-  it("Accepts a default ttl", () => {
-    const cache = new DataCache({
-      initialData: [
-        { key: "key1", value: "value1" },
-        { key: "key2", value: "value2" }
-      ],
-      defaultTtl: 5
-    });
+  describe("keys tests", () => {
+    it("Can return a list of keys that exist", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
 
-    jest.advanceTimersByTime(4000);
-    expect(cache.get("key1")).toEqual("value1");
-    expect(cache.get("key2")).toEqual("value2");
-    jest.advanceTimersByTime(1000);
-    expect(cache.get("key1")).toBeUndefined();
-    expect(cache.get("key2")).toBeUndefined();
+      expect(cache.keys()).toEqual(["key1", "key2"]);
+    });
   });
 
-  it("Uses an item specific ttl over a default one", () => {
-    const cache = new DataCache({
-      initialData: [
-        { key: "key1", value: "value1" },
-        { key: "key2", value: "value2", ttl: 6 }
-      ],
-      defaultTtl: 5
+  describe("stats tests", () => {
+    it("Can return stats for a single item", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      expect(cache.stats("key1")).toEqual({ accesses: 0 });
     });
 
-    jest.advanceTimersByTime(4000);
-    expect(cache.get("key1")).toEqual("value1");
-    expect(cache.get("key2")).toEqual("value2");
-    jest.advanceTimersByTime(1000);
-    expect(cache.get("key1")).toBeUndefined();
-    expect(cache.get("key2")).toEqual("value2");
+    it("Can return stats for multiple items", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+
+      expect(cache.stats("key1", "key2")).toEqual({
+        key1: { accesses: 0 },
+        key2: { accesses: 0 }
+      });
+    });
+
+    it("Can return stats for all items", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+
+      expect(cache.stats()).toEqual({
+        key1: { accesses: 0 },
+        key2: { accesses: 0 }
+      });
+    });
+
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({ errorOnMiss: true });
+
+      expect(() => cache.stats("key1")).toThrowError(
+        "The following keys do not exist on the cache - key1"
+      );
+    });
+
+    it("Doesn't throw an error when errorOnMiss is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      expect(cache.stats("key1", "key2")).toEqual({
+        key1: { accesses: 0 }
+      });
+    });
   });
 
-  it("Can take in a custom interval duration", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1" }],
-      defaultTtl: 5,
-      interval: 10
+  describe("clearStats tests", () => {
+    it("Can reset the stats of items", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      expect(cache.stats("key1")).toEqual({ accesses: 0 });
+      cache.get("key1");
+      expect(cache.stats("key1")).toEqual({ accesses: 1 });
+      cache.clearStats();
+      expect(cache.stats("key1")).toEqual({ accesses: 0 });
     });
 
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key1")).toEqual("value1");
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key1")).toBeUndefined();
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({ errorOnMiss: true });
+
+      expect(() => cache.clearStats("key1")).toThrowError(
+        "The following keys do not exist on the cache - key1"
+      );
+    });
+
+    it("Does not throw an error when errorOnMiss is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1" }]
+      });
+
+      cache.get("key1");
+      expect(cache.stats("key1")).toEqual({ accesses: 1 });
+
+      cache.clearStats("key1", "key2");
+      expect(cache.stats("key1")).toEqual({ accesses: 0 });
+    });
   });
 
-  it("Can accept an updated defaultTtl", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1" }],
-      defaultTtl: 5
+  describe("config tests", () => {
+    it("Can accept an updated config", () => {
+      const cache = new DataCache();
+      cache.get("key1"); // Shouldn't error as errorOnMiss is false
+      cache.config({ errorOnMiss: true });
+      expect(() => cache.get("key1")).toThrowError(
+        "The following keys do not exist on the cache - key1"
+      );
     });
-
-    expect(cache.get("key1")).toEqual("value1");
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key1")).toBeUndefined();
-
-    cache.config({ defaultTtl: 10 });
-    cache.set({ key: "key2", value: "value2" });
-
-    jest.advanceTimersByTime(8000);
-    expect(cache.get("key2")).toEqual("value2");
-    jest.advanceTimersByTime(2000);
-    expect(cache.get("key2")).toBeUndefined();
   });
 
-  it("Can accept an updated interval", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
-      interval: 5
+  describe("ttl tests", () => {
+    it("Can update the ttl of items", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+
+      jest.advanceTimersByTime(4000);
+      cache.ttl(10, "key1"); // Should no longer expire at 5 seconds
+      jest.advanceTimersByTime(2000);
+
+      expect(cache.get("key1")).toEqual("value1");
     });
-    expect(cache.get("key1")).toEqual("value1");
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key1")).toBeUndefined();
 
-    cache.config({ interval: 10 });
-    cache.set({ key: "key2", value: "value2", ttl: 5 });
+    it("Can update the ttl of all items", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
 
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key2")).toEqual("value2");
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key2")).toBeUndefined();
+      jest.advanceTimersByTime(4000);
+      cache.ttl(10); // Should no longer expire at 5 seconds
+      jest.advanceTimersByTime(2000);
+
+      expect(cache.get("key1")).toEqual("value1");
+    });
+
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({ errorOnMiss: true });
+
+      expect(() => cache.ttl(5, "key1")).toThrowError(
+        "The following keys do not exist on the cache - key1"
+      );
+    });
+
+    it("Does not throw an error when errorOnMiss is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+
+      jest.advanceTimersByTime(4000);
+      cache.ttl(10, "key1", "key2"); // Should no longer expire at 5 seconds
+      jest.advanceTimersByTime(2000);
+
+      expect(cache.get("key1")).toEqual("value1");
+    });
   });
 
-  it("Can update the ttl of an item(s)", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+  describe("purge tests", () => {
+    it("Can remove expired items", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1", ttl: 5 },
+          { key: "key2", value: "value2" }
+        ],
+        removeOnExpire: false,
+        defaultTtl: 3
+      });
+      jest.advanceTimersByTime(4000);
+      expect(cache.get("key1")).toEqual("value1");
+      jest.advanceTimersByTime(1000);
+      expect(cache.get("key1")).toEqual("value1");
+      cache.purge();
+      expect(cache.get("key1")).toBeUndefined();
     });
-
-    jest.advanceTimersByTime(4000);
-    cache.ttl(10, "key1");
-    jest.advanceTimersByTime(1000);
-    expect(cache.get("key1")).toEqual("value1");
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key1")).toBeUndefined();
-
-    cache.set(
-      { key: "key1", value: "value1", ttl: 5 },
-      { key: "key2", value: "value2", ttl: 5 }
-    );
-    jest.advanceTimersByTime(4000);
-    cache.ttl(10);
-    jest.advanceTimersByTime(1000);
-    expect(cache.get("key1")).toEqual("value1");
-    expect(cache.get("key2")).toEqual("value2");
-    jest.advanceTimersByTime(5000);
-    expect(cache.get("key1")).toBeUndefined();
-    expect(cache.get("key2")).toBeUndefined();
   });
 
-  it("Emits an event on set", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache();
-    cache.on("set", (key, value) => {
-      mock(key, value);
+  describe("resetExpiry tests", () => {
+    it("Can reset the expiry of items", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+      jest.advanceTimersByTime(4000);
+      expect(cache.get("key1")).toEqual("value1");
+      cache.resetExpiry("key1");
+      jest.advanceTimersByTime(2000);
+      expect(cache.get("key1")).toEqual("value1");
+      jest.advanceTimersByTime(3000);
+      expect(cache.get("key1")).toBeUndefined();
     });
-    cache.set({ key: "key1", value: "value1", ttl: 5 });
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
+
+    it("Can reset the expiry of all items", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+      jest.advanceTimersByTime(4000);
+      expect(cache.get("key1")).toEqual("value1");
+      cache.resetExpiry();
+      jest.advanceTimersByTime(2000);
+      expect(cache.get("key1")).toEqual("value1");
+      jest.advanceTimersByTime(3000);
+      expect(cache.get("key1")).toBeUndefined();
+    });
+
+    it("Throws an error when errorOnMiss is true", () => {
+      const cache = new DataCache({ errorOnMiss: true });
+
+      expect(() => cache.resetExpiry("key1")).toThrowError(
+        "The following keys do not exist on the cache - key1"
+      );
+    });
+
+    it("Doesn't throw an error when errorOnMiss is false", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+      jest.advanceTimersByTime(4000);
+      expect(cache.get("key1")).toEqual("value1");
+      cache.resetExpiry("key1", "key2");
+      jest.advanceTimersByTime(2000);
+      expect(cache.get("key1")).toEqual("value1");
+      jest.advanceTimersByTime(3000);
+      expect(cache.get("key1")).toBeUndefined();
+    });
   });
 
-  it("Emits an event on get", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+  describe("values tests", () => {
+    it("Can return the values in the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.values()).toEqual(["value1", "value2"]);
     });
-    cache.on("get", (key, value) => {
-      mock(key, value);
-    });
-    cache.get("key1");
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
   });
 
-  it("Emits an event on remove", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+  describe("entries tests", () => {
+    it("Can return the entries in the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.entries()).toEqual([
+        ["key1", "value1"],
+        ["key2", "value2"]
+      ]);
     });
-    cache.on("remove", (key, value) => {
-      mock(key, value);
-    });
-    cache.remove("key1");
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
   });
 
-  it("Emits an event on pop", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+  describe("size tests", () => {
+    it("Can retrun the size of the cache", () => {
+      const cache = new DataCache({
+        initialData: [
+          { key: "key1", value: "value1" },
+          { key: "key2", value: "value2" }
+        ]
+      });
+      expect(cache.size()).toEqual(2);
     });
-    cache.on("pop", (key, value) => {
-      mock(key, value);
-    });
-    cache.pop("key1");
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
   });
 
-  it("Emits an event on expire", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
-    });
-    cache.on("expire", (key, value) => {
-      mock(key, value);
-    });
-    jest.advanceTimersByTime(5000);
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
-  });
-
-  it("Emits an event on clear", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache();
-    cache.on("clear", () => {
-      mock();
-    });
-    cache.clear();
-
-    expect(mock).toHaveBeenCalled();
-  });
-
-  it("It can store multiple data types", () => {
-    const cache = new DataCache();
-    cache.set(
-      { key: "key1", value: "value1" },
-      { key: "key2", value: 0 },
-      { key: "key3", value: { field: 1 } }
-    );
-
-    expect(cache.get("key1")).toEqual("value1");
-    expect(cache.get("key2")).toEqual(0);
-    expect(cache.get("key3")).toEqual({ field: 1 });
-  });
-
-  it("Can purge expired items", () => {
-    const mock = jest.fn();
-
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1" }],
-      removeOnExpire: false,
-      defaultTtl: 5
-    });
-    cache.on("expire", (key, value) => {
-      mock(key, value);
-    });
-    jest.advanceTimersByTime(5000);
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
-
-    expect(cache.get("key1")).toEqual("value1");
-
-    cache.purge();
-    expect(cache.get("key1")).toBeUndefined();
-  });
-
-  it("Can reset the expiry time of items", () => {
-    const mock = jest.fn();
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
-      removeOnExpire: false,
-      expireOnce: false
-    });
-    cache.on("expire", (key, value) => {
-      mock(key, value);
-    });
-    jest.advanceTimersByTime(5000);
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
-    expect(cache.get("key1")).toEqual("value1");
-
-    jest.advanceTimersByTime(1000);
-    expect(mock).toHaveBeenNthCalledWith(2, "key1", "value1");
-    cache.resetExpiry();
-    jest.advanceTimersByTime(1000);
-    expect(mock).not.toHaveBeenNthCalledWith(3, "key1", "value1");
-  });
-
-  it("Can restrict items to a single expire event", () => {
-    const mock = jest.fn();
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
-      removeOnExpire: false,
-      expireOnce: true
-    });
-    cache.on("expire", (key, value) => {
-      mock(key, value);
-    });
-    jest.advanceTimersByTime(5000);
-    expect(mock).toHaveBeenCalledWith("key1", "value1");
-    expect(cache.get("key1")).toEqual("value1");
-
-    jest.advanceTimersByTime(1000);
-    expect(mock).not.toHaveBeenNthCalledWith(2, "key1", "value1");
-
-    cache.config({ ...cache.config, expireOnce: false });
-    jest.advanceTimersByTime(1000);
-    expect(mock).toHaveBeenNthCalledWith(2, "key1", "value1");
-  });
-
-  it("Can return an array of values", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+  describe("expiry loop tests", () => {
+    it("Removes expired items", () => {
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+      expect(cache.get("key1")).toEqual("value1");
+      jest.advanceTimersByTime(5000);
+      expect(cache.get("key1")).toBeUndefined();
     });
 
-    expect(cache.values()).toEqual(["value1"]);
-  });
+    it("Triggers an expire event when an item expires", () => {
+      const mockFn = jest.fn();
 
-  it("Can return an array of entries", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }]
+      });
+      cache.on("expire", (key, value) => {
+        mockFn(key, value);
+      });
+      jest.advanceTimersByTime(5000);
+      expect(mockFn).toHaveBeenCalledWith("key1", "value1");
     });
 
-    expect(cache.entries()).toEqual([["key1", "value1"]]);
-  });
+    it("Only trggers a single expire event per item when expireOnce is true", () => {
+      const mockFn = jest.fn();
 
-  it("Can limit capacity", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
-      capacity: 1
+      const cache = new DataCache({
+        initialData: [{ key: "key1", value: "value1", ttl: 5 }],
+        expireOnce: true,
+        removeOnExpire: false
+      });
+      cache.on("expire", (key, value) => {
+        mockFn(key, value);
+      });
+      jest.advanceTimersByTime(5000);
+      expect(mockFn).toHaveBeenCalledWith("key1", "value1");
+      jest.advanceTimersByTime(5000);
+      expect(mockFn).toBeCalledTimes(1);
     });
-
-    cache.set({ key: "key2", value: "value2" });
-    expect(cache.get("key2")).toBeUndefined();
-
-    cache.config({ errorOnFull: true });
-    expect(() => cache.set({ key: "key2", value: "value2" })).toThrowError(
-      "Could not add items as capacity would be exceeded"
-    );
-  });
-
-  it("Throws a error when an item is undefined and errorOnMiss is true", () => {
-    const cache = new DataCache({ errorOnMiss: true });
-
-    expect(() => cache.get("key1")).toThrowError("Key key1 is undefined.");
-  });
-
-  it("Allows the stats of items to be cleared", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }]
-    });
-
-    cache.get("key1");
-    expect(cache.stats("key1").accesses).toEqual(1);
-    cache.clearStats();
-    expect(cache.stats("key1").accesses).toEqual(0);
-  });
-
-  it("Can throw an error when duplicate keys are added", () => {
-    const cache = new DataCache({
-      initialData: [{ key: "key1", value: "value1", ttl: 5 }],
-      errorOnDuplicate: true
-    });
-
-    expect(() => cache.set({ key: "key1", value: "value2" })).toThrowError(
-      "Cannot add existing key key1"
-    );
   });
 });
