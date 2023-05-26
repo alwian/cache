@@ -406,7 +406,7 @@ cache.entries(); // [["key1", "value1"], ["key2", "value2"], ["key3", "value3"]]
 
 ### `size(): number`
 
-Get each `key`/`value` pair stored in the cache.
+Get the number of items stored in the cache.
 
 ```ts
 const cache = new DataCache({
