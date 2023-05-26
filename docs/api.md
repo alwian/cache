@@ -1,9 +1,5 @@
 # API
 
-All available functionality, and examples of usage can be found below. All examples are based on using the default config unless specified.
-
-Some operations trigger events which you can listen for an act upon. See [Events](#events) for information on these.
-
 ## Contents
 
 - [Types](#types)
@@ -42,27 +38,27 @@ Some operations trigger events which you can listen for an act upon. See [Events
 
 This type represents the config used by the cache.
 
-| Field              | Type          | Default Value                                                         | Description                                                                                                                                |
-| ------------------ | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `interval`         | `number`      | `1`                                                                   | How frequently to check if items have expired (in seconds).                                                                                |
-| `defaultTtl`       | `number`      | `0` (by default items won't expire unless given a `ttl` of their own) | The default number a seconds before an item should expire when once it is added to the cache.                                              |
-| `initialData`      | `CacheItem[]` |                                                                       | Initial items which should be inserted into the cache when instantiated. Changing this after a cache has been created will have no effect. |
-| `removeOnExpire`   | `boolean`     | `true`                                                                | Whether expired items should bre removed from the cache.                                                                                   |
-| `expireOnce`       | `boolean`     | `true`                                                                | Whether an expired items should only trigger a single `expire` even, even if it is not removed from the cache and expires again.           |
-| `capacity`         | `number`      | `Infinity`                                                            | The maximum number of items that can be in the cache.                                                                                      |
-| `errorOnFull`      | `boolean`     | `false`                                                               | Whether to throw an error when attemtpting to add items which would result in `capacity` being exceeded.                                   |
-| `errorOnMiss`      | `boolean`     | `false`                                                               | Whether to throw and error when attempting to retrieve a non existant item.                                                                |
-| `errorOnDuplicate` | `boolean`     | `false`                                                               | Whether to throw and error when adding an item with a key that is already in use.                                                          |
+| Field              | Type          | Default Value | Description                                                                                                                                                                          |
+| ------------------ | ------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `interval`         | `number`      | `1`           | How frequently to check if items have expired (in seconds). Set to 0 to stop checking.                                                                                               |
+| `defaultTtl`       | `number`      | `0`           | The default number a seconds before an item should expire once it is added to the cache.                                                                                             |
+| `initialData`      | `CacheItem[]` |               | Initial items which should be inserted into the cache when it is created. Changing this after a cache has been created will have no effect.                                          |
+| `removeOnExpire`   | `boolean`     | `true`        | Whether expired items should be removed from the cache.                                                                                                                              |
+| `expireOnce`       | `boolean`     | `true`        | Whether an expired item should only trigger a single `expire` event, even if it is not removed from the cache and is still expired the next time the cache checks for expired items. |
+| `capacity`         | `number`      | `Infinity`    | The maximum number of items that can be in the cache.                                                                                                                                |
+| `errorOnFull`      | `boolean`     | `false`       | Whether to throw an error when attemtpting to add items which would result in `capacity` being exceeded.                                                                             |
+| `errorOnMiss`      | `boolean`     | `false`       | Whether to throw and error when attempting to retrieve a non existent item.                                                                                                          |
+| `errorOnDuplicate` | `boolean`     | `false`       | Whether to throw an error when adding an item with a key that is already in use.                                                                                                     |
 
 ### `CacheItem`
 
 This type represents an item to add to the cache.
 
-| Field   | Type     | Description                                                                        |
-| ------- | -------- | ---------------------------------------------------------------------------------- |
-| `key`   | `string` | The key used to access the item.                                                   |
-| `value` | `any`    | The value of the item.                                                             |
-| `ttl?`  | `number` | How long before the item should expire after it is added to the cache (in seconds) |
+| Field   | Type     | Description                                                                         |
+| ------- | -------- | ----------------------------------------------------------------------------------- |
+| `key`   | `string` | The key used to access the item.                                                    |
+| `value` | `any`    | The value of the item.                                                              |
+| `ttl?`  | `number` | How long before the item should expire after it is added to the cache (in seconds). |
 
 ### `ItemStats`
 
@@ -86,7 +82,7 @@ cache.set({ key: "key1", value: "key2" }, { key: "key2", value: "value2" });
 
 Has the potential to throw an error if -
 
-- [`capacity`](../README.md#configuration) is set, [`errorOnFull`](../README.md#configuration) is `true` and the number of items being added would exceed capacity. In this case no items would be added before the error is thrown.
+- [`capacity`](../README.md#configuration) is set, [`errorOnFull`](../README.md#configuration) is `true` and the number of items being added would exceed capacity. In this case no items will be added before the error is thrown.
 - [`errorOnDuplicate`](../README.md#configuration) is `true` and an item is being added with a key that already exists in the cache.
 
 ### `get(...keys: string[]): unknown | Record<string,unknown>`
@@ -120,7 +116,7 @@ Has the potential to throw an error if -
 
 ### `pop(...keys: string[]): unknown | Record<string, unknown>`
 
-Use this to retrieve items from the cache whilst simultaneousely removing them from the cache.
+Use this to retrieve items whilst simultaneousely removing them from the cache.
 
 There are 3 potential ways this method can return -
 
@@ -221,7 +217,7 @@ const cache = new DataCache({
   ]
 });
 
-cache.values(); // ["key1", "key2", "key3"]
+cache.keys(); // ["key1", "key2", "key3"]
 ```
 
 ### `stats(...keys: string[]): ItemStats | Record<string, ItemStats>`
@@ -231,7 +227,7 @@ Get the stats of items in the cache.
 There are 3 possible uses for this method -
 
 - Passing a single key will return an `ItemStats` object containing the stats for that key.
-- Passing multiple keys will result in an object of containing `key`/`ItemStats` pairs.
+- Passing multiple keys will return an object containing `key`/`ItemStats` pairs.
 - Passing in no keys will result in the stats for all items being returned in an object of containing `key`/`ItemStats` pairs.
 
 ```ts
@@ -247,6 +243,10 @@ cache.stats("key1"); // { accesses: 0 }
 cache.stats("key1", "key2"); // { key1: { accesses: 0 }, keys2: { accesses: 0 }}
 cache.stats(); // { key1: { accesses: 0 }, keys2: { accesses: 0 }, key3: { accesses: 0 }}
 ```
+
+Has the potential to throw an error if -
+
+- [`errorOnMiss`](../README.md#configuration) is `true` and a key is passed that doesn't exist.
 
 ### `clearStats(...keys: string[]): void`
 
@@ -274,7 +274,7 @@ cache.stats("key1"); // { accesses: 0 }
 cache.get("key1", "key2");
 cache.stats(); // { key1: { accesses: 1 }, key2: { accesses: 1 } }
 
-cache.clear();
+cache.clearStats();
 cache.stats(); // { key1: { accesses: 0 }, key2: { accesses: 0 } }
 ```
 
@@ -301,7 +301,7 @@ Update the `ttl` of items in the cache.
 
 There are 2 ways to use this method -
 
-- Passing in 1 or more keys will updae the `ttl` for the specified keys.
+- Passing in 1 or more keys will update the `ttl` for the specified keys.
 - If no keys are specified then all items will have their `ttl` updated.
 
 ```ts
@@ -322,7 +322,7 @@ Has the potential to throw an error if -
 
 ### `purge(): void`
 
-Remove expire items from the cache.
+Remove expired items from the cache.
 
 ```ts
 const cache = new DataCache({
@@ -463,7 +463,7 @@ cache.get();
 
 ### `pop`
 
-This is event is triggered for each item that is retrieved/removed using [`pop`](#popkeys-string-unknown--recordstring-unknown).
+This is event is triggered for each item that is retrieved using [`pop`](#popkeys-string-unknown--recordstring-unknown).
 
 ```ts
 const cache = new DataCache({
@@ -485,7 +485,7 @@ cache.pop();
 
 ### `remove`
 
-This is event is triggered for each item that is removed using [`remove`](#removekeys-string-void).
+This event is triggered for each item that is removed using [`remove`](#removekeys-string-void).
 
 ```ts
 const cache = new DataCache({

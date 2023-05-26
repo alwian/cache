@@ -5,8 +5,6 @@
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
-- [Configuration](#configuration)
-- [API](#api)
 
 ## Getting Started
 
