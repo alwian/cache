@@ -1,19 +1,19 @@
 import { describe } from "node:test";
-import DataCache from ".";
+import Cache from ".";
 
 jest.useFakeTimers();
 
-describe("DataCache tests", () => {
+describe("Cache tests", () => {
   describe("get tests", () => {
     it("Can retrieve a single item from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.get("key1")).toEqual("value1");
     });
 
     it("Can retrieve a multiple items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -26,7 +26,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can retrieve all items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -39,7 +39,7 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         errorOnMiss: true
       });
 
@@ -49,7 +49,7 @@ describe("DataCache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is true", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -59,13 +59,13 @@ describe("DataCache tests", () => {
     it("Emits a get event when items are retrieved", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
         ]
       });
-      cache.on("get", (key, value) => {
+      cache.on("get", (key: string, value: string) => {
         mockFn(key, value);
       });
 
@@ -78,13 +78,13 @@ describe("DataCache tests", () => {
 
   describe("set tests", () => {
     it("Can add items to the cache", () => {
-      const cache = new DataCache();
+      const cache = new Cache();
       cache.set({ key: "key1", value: "value1" });
       expect(cache.get("key1")).toEqual("value1");
     });
 
     it("Throws an error when errorOnDuplicate is true", () => {
-      const cache = new DataCache({ errorOnDuplicate: true });
+      const cache = new Cache({ errorOnDuplicate: true });
       cache.set({ key: "key1", value: "value1" });
       expect(() =>
         cache.set(
@@ -96,7 +96,7 @@ describe("DataCache tests", () => {
     });
 
     it("Overwites items when errorOnDuplicate is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
       cache.set(
@@ -110,14 +110,14 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnFull is true", () => {
-      const cache = new DataCache({ errorOnFull: true, capacity: 0 });
+      const cache = new Cache({ errorOnFull: true, capacity: 0 });
       expect(() => cache.set({ key: "key1", value: "value1" })).toThrowError(
         "Could not add items as capacity would be exceeded"
       );
     });
 
     it("Allows items to be added up to capacity when errorOnFull is false", () => {
-      const cache = new DataCache({ capacity: 1 });
+      const cache = new Cache({ capacity: 1 });
       cache.set(
         { key: "key1", value: "value1" },
         { key: "key2", value: "value2" }
@@ -130,8 +130,8 @@ describe("DataCache tests", () => {
     it("Emits a set event for each item added", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache();
-      cache.on("set", (key, value) => {
+      const cache = new Cache();
+      cache.on("set", (key: string, value: string) => {
         mockFn(key, value);
       });
 
@@ -147,7 +147,7 @@ describe("DataCache tests", () => {
 
   describe("remove tests", () => {
     it("Can remove items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.get("key1")).toEqual("value1");
@@ -156,7 +156,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can remove all items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -170,14 +170,14 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({ errorOnMiss: true });
+      const cache = new Cache({ errorOnMiss: true });
       expect(() => cache.remove("key1")).toThrow(
         "The following keys do not exist on the cache - key1"
       );
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -188,13 +188,13 @@ describe("DataCache tests", () => {
     it("Emits a remove event for each item removed", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
         ]
       });
-      cache.on("remove", (key, value) => {
+      cache.on("remove", (key: string, value: string) => {
         mockFn(key, value);
       });
 
@@ -207,7 +207,7 @@ describe("DataCache tests", () => {
 
   describe("pop tests", () => {
     it("Can pop items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.pop("key1")).toEqual("value1");
@@ -215,7 +215,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can pop multiple items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -232,7 +232,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can pop all items from the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -243,7 +243,7 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -256,7 +256,7 @@ describe("DataCache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.pop("key1", "key2")).toEqual({ key1: "value1" });
@@ -265,13 +265,13 @@ describe("DataCache tests", () => {
     it("Emits a pop event for each item removed", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
         ]
       });
-      cache.on("pop", (key, value) => {
+      cache.on("pop", (key: string, value: string) => {
         mockFn(key, value);
       });
 
@@ -284,7 +284,7 @@ describe("DataCache tests", () => {
 
   describe("clear tests", () => {
     it("Can clear the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -299,7 +299,7 @@ describe("DataCache tests", () => {
     it("Emits a clear even when called", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache();
+      const cache = new Cache();
       cache.on("clear", () => {
         mockFn();
       });
@@ -310,7 +310,7 @@ describe("DataCache tests", () => {
 
   describe("has tests", () => {
     it("Can check if a key exists", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -321,7 +321,7 @@ describe("DataCache tests", () => {
 
   describe("keys tests", () => {
     it("Can return a list of keys that exist", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -334,7 +334,7 @@ describe("DataCache tests", () => {
 
   describe("stats tests", () => {
     it("Can return stats for a single item", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -342,7 +342,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can return stats for multiple items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -356,7 +356,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can return stats for all items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -370,7 +370,7 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({ errorOnMiss: true });
+      const cache = new Cache({ errorOnMiss: true });
 
       expect(() => cache.stats("key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -378,7 +378,7 @@ describe("DataCache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -390,7 +390,7 @@ describe("DataCache tests", () => {
 
   describe("clearStats tests", () => {
     it("Can reset the stats of items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -402,7 +402,7 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({ errorOnMiss: true });
+      const cache = new Cache({ errorOnMiss: true });
 
       expect(() => cache.clearStats("key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -410,7 +410,7 @@ describe("DataCache tests", () => {
     });
 
     it("Does not throw an error when errorOnMiss is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -424,7 +424,7 @@ describe("DataCache tests", () => {
 
   describe("config tests", () => {
     it("Can accept an updated config", () => {
-      const cache = new DataCache();
+      const cache = new Cache();
       cache.get("key1"); // Shouldn't error as errorOnMiss is false
       cache.config({ errorOnMiss: true });
       expect(() => cache.get("key1")).toThrowError(
@@ -435,7 +435,7 @@ describe("DataCache tests", () => {
 
   describe("ttl tests", () => {
     it("Can update the ttl of items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
 
@@ -447,7 +447,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can update the ttl of all items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
 
@@ -459,7 +459,7 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({ errorOnMiss: true });
+      const cache = new Cache({ errorOnMiss: true });
 
       expect(() => cache.ttl(5, "key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -467,7 +467,7 @@ describe("DataCache tests", () => {
     });
 
     it("Does not throw an error when errorOnMiss is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
 
@@ -481,7 +481,7 @@ describe("DataCache tests", () => {
 
   describe("purge tests", () => {
     it("Can remove expired items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1", ttl: 5 },
           { key: "key2", value: "value2" }
@@ -500,7 +500,7 @@ describe("DataCache tests", () => {
 
   describe("resetExpiry tests", () => {
     it("Can reset the expiry of items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       jest.advanceTimersByTime(4000);
@@ -513,7 +513,7 @@ describe("DataCache tests", () => {
     });
 
     it("Can reset the expiry of all items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       jest.advanceTimersByTime(4000);
@@ -526,7 +526,7 @@ describe("DataCache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new DataCache({ errorOnMiss: true });
+      const cache = new Cache({ errorOnMiss: true });
 
       expect(() => cache.resetExpiry("key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -534,7 +534,7 @@ describe("DataCache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       jest.advanceTimersByTime(4000);
@@ -549,7 +549,7 @@ describe("DataCache tests", () => {
 
   describe("values tests", () => {
     it("Can return the values in the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -561,7 +561,7 @@ describe("DataCache tests", () => {
 
   describe("entries tests", () => {
     it("Can return the entries in the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -576,7 +576,7 @@ describe("DataCache tests", () => {
 
   describe("size tests", () => {
     it("Can retrun the size of the cache", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -588,7 +588,7 @@ describe("DataCache tests", () => {
 
   describe("expiry loop tests", () => {
     it("Removes expired items", () => {
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       expect(cache.get("key1")).toEqual("value1");
@@ -599,10 +599,10 @@ describe("DataCache tests", () => {
     it("Triggers an expire event when an item expires", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
-      cache.on("expire", (key, value) => {
+      cache.on("expire", (key: string, value: string) => {
         mockFn(key, value);
       });
       jest.advanceTimersByTime(5000);
@@ -612,12 +612,12 @@ describe("DataCache tests", () => {
     it("Only trggers a single expire event per item when expireOnce is true", () => {
       const mockFn = jest.fn();
 
-      const cache = new DataCache({
+      const cache = new Cache({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }],
         expireOnce: true,
         removeOnExpire: false
       });
-      cache.on("expire", (key, value) => {
+      cache.on("expire", (key: string, value: string) => {
         mockFn(key, value);
       });
       jest.advanceTimersByTime(5000);

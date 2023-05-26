@@ -1,4 +1,4 @@
-import consts from "../consts/consts";
+import consts from "../consts";
 
 export const checkMissingKeys = (
   validKeys: string[],

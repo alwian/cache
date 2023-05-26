@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { checkDuplicateKeys, checkMissingKeys } from "../utils";
 
-export default class DataCache extends EventEmitter {
+export default class Cache extends EventEmitter {
   #data: Record<string, CachedItem> = {};
 
   #config: Omit<CacheConfig, "initialData"> = {
