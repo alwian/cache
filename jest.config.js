@@ -10,7 +10,8 @@ const config = {
       statements: 0
     }
   },
-  collectCoverageFrom: ["src/**/*.ts", "!src/index.ts"]
+  collectCoverageFrom: ["src/**/*.ts", "!src/index.ts", "!src/types/**"],
+  testPathIgnorePatterns: ["dist"]
 };
 
 export default config;
