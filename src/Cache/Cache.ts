@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { CacheConfig, CachedItem, CacheItem, ItemStats } from "../types";
 import { checkDuplicateKeys, checkMissingKeys } from "../utils";
 
 export default class Cache extends EventEmitter {
@@ -61,7 +62,7 @@ export default class Cache extends EventEmitter {
             (ttl && time - this.#data[key].timeAdded >= ttl * 1000)
           ) {
             const keyCopy = key;
-            const valueCopy = this.#data[key]?.value;
+            const valueCopy = this.#data[key].value;
 
             if (this.#config.removeOnExpire) {
               delete this.#data[key];
@@ -102,7 +103,7 @@ export default class Cache extends EventEmitter {
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
       if (this.#data[key]) {
-        items[key] = this.#data[key]?.value;
+        items[key] = this.#data[key].value;
         if (items[key]) this.#data[key].stats.accesses += 1;
       }
       this.emit("get", key, this.#data[key]?.value);

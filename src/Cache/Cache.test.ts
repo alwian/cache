@@ -339,6 +339,7 @@ describe("Cache tests", () => {
       });
 
       expect(cache.stats("key1")).toEqual({ accesses: 0 });
+      expect(cache.stats("key2")).toEqual(undefined);
     });
 
     it("Can return stats for multiple items", () => {
@@ -609,7 +610,7 @@ describe("Cache tests", () => {
       expect(mockFn).toHaveBeenCalledWith("key1", "value1");
     });
 
-    it("Only trggers a single expire event per item when expireOnce is true", () => {
+    it("Only triggers a single expire event per item when expireOnce is true", () => {
       const mockFn = jest.fn();
 
       const cache = new Cache({
