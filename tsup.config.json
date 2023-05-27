@@ -1,0 +1,7 @@
+{
+  "entry": ["src", "!src/**/*.test.*"],
+  "format": ["esm", "cjs"],
+  "dts": true,
+  "minify": true,
+  "clean": true
+}
