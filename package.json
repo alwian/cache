@@ -1,13 +1,16 @@
 {
   "name": "@alwian/cache",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Module for caching data",
   "main": "dist/index.js",
-  "types": "dist/types",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "rm -Rf dist/ && tsc && copyfiles -f src/types/* dist/types/types",
-    "start": "npm run build && node dist/index.js",
+    "build": "tsup",
     "test": "jest --coverage=true",
     "prepare": "husky install"
   },
@@ -28,6 +31,7 @@
     "lint-staged": "^13.2.2",
     "prettier": "2.8.8",
     "ts-jest": "^29.1.0",
+    "tsup": "^6.7.0",
     "typescript": "^5.0.4"
   },
   "lint-staged": {

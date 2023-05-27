@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
+    "target": "ES2015",
+    "module": "ES2015",
     "rootDir": "./src",
     "moduleResolution": "node",
     "outDir": "./dist",

@@ -1,24 +1,25 @@
-interface CacheItem {
+export interface CacheItem {
   key: string;
   value: unknown;
   ttl?: number;
 }
 
-interface CachedItem extends CacheItem {
+export interface CachedItem extends CacheItem {
   timeAdded: number;
   stats: ItemStats;
   expired: boolean;
 }
 
-interface ItemStats {
+export interface ItemStats {
   accesses: number;
 }
-interface CacheStats {
+
+export interface CacheStats {
   accesses: number;
   misses: number;
 }
 
-interface CacheConfig {
+export interface CacheConfig {
   interval: number;
   defaultTtl: number;
   initialData?: CacheItem[];
