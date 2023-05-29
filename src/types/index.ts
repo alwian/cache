@@ -4,21 +4,16 @@ export interface CacheItem {
   ttl?: number;
 }
 
-export interface CachedItem extends CacheItem {
-  timeAdded: number;
-  stats: ItemStats;
-  expired: boolean;
-}
-
 export interface ItemStats {
   accesses: number;
 }
 
-export interface CacheStats {
-  accesses: number;
-  misses: number;
+export interface ItemDetails {
+  stats: ItemStats;
+  expired: boolean;
+  ttl?: number;
+  timeAdded: number;
 }
-
 export interface CacheConfig {
   interval: number;
   defaultTtl: number;

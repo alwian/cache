@@ -1,9 +1,10 @@
 import { EventEmitter } from "events";
-import { CacheConfig, CachedItem, CacheItem, ItemStats } from "../types";
+import { CacheConfig, CacheItem, ItemDetails, ItemStats } from "../types";
 import { checkDuplicateKeys, checkMissingKeys } from "../utils";
 
 export default class Cache extends EventEmitter {
-  #data: Record<string, CachedItem> = {};
+  #data: Record<string, unknown> = {};
+  #itemDetails: Record<string, ItemDetails> = {};
 
   #config: Omit<CacheConfig, "initialData"> = {
     interval: 1,
@@ -33,8 +34,9 @@ export default class Cache extends EventEmitter {
       this.#config = { ...this.#config, ...otherConfig };
 
       config.initialData?.forEach((item: CacheItem) => {
-        this.#data[item.key] = {
-          ...item,
+        this.#data[item.key] = item.value;
+        this.#itemDetails[item.key] = {
+          ttl: item.ttl,
           timeAdded,
           stats: { accesses: 0 },
           expired: false
@@ -52,22 +54,23 @@ export default class Cache extends EventEmitter {
         const time = Date.now();
 
         Object.keys(this.#data).forEach((key: string) => {
-          if (this.#data[key].expired && this.#config.expireOnce) {
+          if (this.#itemDetails[key].expired && this.#config.expireOnce) {
             return;
           }
 
-          const ttl = this.#data[key].ttl || this.#config.defaultTtl;
+          const ttl = this.#itemDetails[key].ttl || this.#config.defaultTtl;
           if (
-            this.#data[key].expired ||
-            (ttl && time - this.#data[key].timeAdded >= ttl * 1000)
+            this.#itemDetails[key].expired ||
+            (ttl && time - this.#itemDetails[key].timeAdded >= ttl * 1000)
           ) {
             const keyCopy = key;
-            const valueCopy = this.#data[key].value;
+            const valueCopy = this.#data[key];
 
             if (this.#config.removeOnExpire) {
               delete this.#data[key];
+              delete this.#itemDetails[key];
             } else {
-              this.#data[key].expired = true;
+              this.#itemDetails[key].expired = true;
             }
 
             this.emit("expire", keyCopy, valueCopy);
@@ -94,19 +97,19 @@ export default class Cache extends EventEmitter {
       keys = this.keys();
     } else if (keys.length === 1) {
       if (this.#data[keys[0]]) {
-        this.#data[keys[0]].stats.accesses += 1;
+        this.#itemDetails[keys[0]].stats.accesses += 1;
       }
-      this.emit("get", keys[0], this.#data[keys[0]]?.value);
-      return this.#data[keys[0]]?.value;
+      this.emit("get", keys[0], this.#data[keys[0]]);
+      return this.#data[keys[0]];
     }
 
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
       if (this.#data[key]) {
-        items[key] = this.#data[key].value;
-        if (items[key]) this.#data[key].stats.accesses += 1;
+        items[key] = this.#data[key];
+        if (items[key]) this.#itemDetails[key].stats.accesses += 1;
       }
-      this.emit("get", key, this.#data[key]?.value);
+      this.emit("get", key, this.#data[key]);
     });
     return items;
   }
@@ -139,8 +142,9 @@ export default class Cache extends EventEmitter {
         break;
       }
 
-      this.#data[item.key] = {
-        ...item,
+      this.#data[item.key] = item.value;
+      this.#itemDetails[item.key] = {
+        ttl: item.ttl,
         timeAdded,
         stats: { accesses: 0 },
         expired: false
@@ -167,8 +171,9 @@ export default class Cache extends EventEmitter {
 
     keys.forEach((key: string) => {
       const keyCopy = key;
-      const valueCopy = this.#data[key]?.value;
+      const valueCopy = this.#data[key];
       delete this.#data[key];
+      delete this.#itemDetails[key];
 
       this.emit("remove", keyCopy, valueCopy);
     });
@@ -190,16 +195,18 @@ export default class Cache extends EventEmitter {
     if (!keys.length) {
       keys = this.keys();
     } else if (keys.length === 1) {
-      const value = this.#data[keys[0]]?.value;
+      const value = this.#data[keys[0]];
       delete this.#data[keys[0]];
+      delete this.#itemDetails[keys[0]];
       this.emit("pop", keys[0], value);
       return value;
     }
 
     const items: Record<string, unknown> = {};
     keys.forEach((key: string) => {
-      items[key] = this.#data[key]?.value;
+      items[key] = this.#data[key];
       delete this.#data[key];
+      delete this.#itemDetails[key];
       this.emit("pop", key, items[key]);
     });
 
@@ -249,13 +256,13 @@ export default class Cache extends EventEmitter {
     if (!keys.length) {
       keys = this.keys();
     } else if (keys.length === 1) {
-      return this.#data[keys[0]]?.stats;
+      return this.#itemDetails[keys[0]]?.stats;
     }
 
     const stats: Record<string, ItemStats> = {};
     keys.forEach((key: string) => {
       if (this.#data[key]) {
-        stats[key] = this.#data[key].stats;
+        stats[key] = this.#itemDetails[key].stats;
       }
     });
 
@@ -277,7 +284,7 @@ export default class Cache extends EventEmitter {
     }
 
     this.keys().forEach((key: string) => {
-      this.#data[key].stats = {
+      this.#itemDetails[key].stats = {
         accesses: 0
       };
     });
@@ -311,8 +318,10 @@ export default class Cache extends EventEmitter {
       keys = this.keys();
     }
 
-    Object.values(this.#data).forEach((item: CachedItem) => {
-      item.ttl = ttl;
+    keys.forEach((key: string) => {
+      if (this.#itemDetails[key]) {
+        this.#itemDetails[key].ttl = ttl;
+      }
     });
   }
 
@@ -322,11 +331,12 @@ export default class Cache extends EventEmitter {
    * Useful for when `removeOnExpire` is `false` but you want to remove expired data.
    */
   purge(): void {
-    for (const [key, value] of Object.entries(this.#data)) {
+    for (const [key, value] of Object.entries(this.#itemDetails)) {
       const ttl = value.ttl || this.#config.defaultTtl;
       const time = Date.now();
       if (ttl && time - value.timeAdded >= ttl * 1000) {
         delete this.#data[key];
+        delete this.#itemDetails[key];
       }
     }
   }
@@ -348,8 +358,8 @@ export default class Cache extends EventEmitter {
     const time = Date.now();
     keys.forEach((key: string) => {
       if (this.#data[key]) {
-        this.#data[key].timeAdded = time;
-        this.#data[key].expired = false;
+        this.#itemDetails[key].timeAdded = time;
+        this.#itemDetails[key].expired = false;
       }
     });
   }
@@ -360,7 +370,7 @@ export default class Cache extends EventEmitter {
    * @returns An array containing each value stored.
    */
   values(): unknown[] {
-    return Object.values(this.#data).map((item: CacheItem) => item.value);
+    return Object.values(this.#data);
   }
 
   /**
@@ -369,7 +379,7 @@ export default class Cache extends EventEmitter {
    * @returns An array in the format of `[[key, value],...]`.
    */
   entries(): [string, unknown][] {
-    return this.keys().map((key: string) => [key, this.#data[key].value]);
+    return Object.entries(this.#data);
   }
 
   /**
