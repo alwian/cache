@@ -1,19 +1,24 @@
 {
   "name": "@alwian/cache",
   "version": "0.0.2",
-  "description": "Module for caching data",
+  "description": "Module for caching pieces of data with optional ttls.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alwian/cache"
+  },
   "files": [
-    "dist",
-    "docs"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
     "test": "jest --coverage=true",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "lint": "eslint src && prettier --check src",
+    "publish": "npm run lint && npm run build && npm publish --access=public"
   },
   "author": "",
   "license": "MIT",
