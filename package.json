@@ -1,7 +1,7 @@
 {
   "name": "@alwian/cache",
   "version": "0.0.2",
-  "description": "Module for caching pieces of data with optional ttls.",
+  "description": "Type safe caching of data with ttls.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -20,7 +20,13 @@
     "lint": "eslint src && prettier --check src",
     "publish": "npm run lint && npm run build && npm publish --access=public"
   },
-  "author": "",
+  "author": "Alex Anderson (alwian)",
+  "keywords": [
+    "cache",
+    "ttl",
+    "store",
+    "expiry"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@commitlint/cli": "^17.6.3",

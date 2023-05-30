@@ -77,6 +77,12 @@ export default class Cache<
     }
   }
 
+  /**
+   * Initialize the cache ready for use.
+   *
+   * @param param0: Any custom config and initial data.
+   * @returns The cache instance that has been initialized.
+   */
   init<K extends keyof ItemMap>({
     config,
     initialData
@@ -91,7 +97,6 @@ export default class Cache<
     const timeAdded = Date.now();
 
     if (config) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       this.#config = { ...this.#config, ...config };
     }
 

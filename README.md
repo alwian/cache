@@ -1,6 +1,6 @@
 # Cache
 
-Cache can be used to store data while applying varying ttls to each item so that they expire after a given time. Varying events are triggered for different operations such as `get`, `remove`, `pop` and also when an item expires.
+Cache is a [type safe](#type-safety) way to store data with ttls. Event listneners are also available for different operations, see [Events](#events).
 
 ## Contents
 
@@ -20,11 +20,11 @@ Run `npm install @alwian/cache` to install the latest version.
 ```ts
 import Cache from "@alwian/cache";
 
-// Create a cache using the default config and no initial data
-const cache = new Cache();
+// Create a cache using the default config and no initial data, you must call .init() before you can use a cache.
+const cache = new Cache().init();
 
 // Create a cache with some custom config and initial data
-const cacheWithConfig = new Cache({
+const cacheWithConfig = new Cache().init({
   initialData: [{ key: "myKey", value: "myValue" }],
   defaultTtl: 10,
   ...
@@ -36,6 +36,7 @@ const cacheWithConfig = new Cache({
 ## API
 
 - [Types](#types)
+  - [Type Safety](#type-safety)
   - [`CacheConfig`](#cacheconfig)
   - [`CacheItem`](#cacheitem)
   - [`ItemStats`](#itemstats)
@@ -67,21 +68,51 @@ const cacheWithConfig = new Cache({
 
 ### Types
 
+### Type Safety
+
+This package has been built with type safety in mind. It allows you to define what keys are allowed to be stored in a cache, and what type of value each key corresponds too. For example -
+
+```ts
+type ItemMap = {
+  key1: string;
+  key2: number;
+  key3: string;
+};
+
+// Create cache using predefined key value pairs in ItemMap
+const cache = new Cache<ItemMap>().init();
+
+// Won't compile as key4 is not a permitted key
+cache.set({ key: "key4", value: "value4" });
+
+// Won't compile as key1 should correspond to a string
+cache.set({ key: "key1", value: 10 });
+
+// Will compile as key2 is a valid key and the type of value is correct
+cache.set({ key: "key2", value: 10 });
+```
+
+Each method available has been written to be type safe -
+
+- When you use a method which requires you to enter keys, it will restrict the available keys to those provided.
+- When you need to enter key/value pairs, it will ensure the type of value is correct based on the key provided.
+
+To omit type safety and allow any keys/values, just create the cache without providing ItemMap.
+
 #### `CacheConfig`
 
 This type represents the config used by the cache.
 
-| Field              | Type          | Default Value | Description                                                                                                                                                                          |
-| ------------------ | ------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `interval`         | `number`      | `1`           | How frequently to check if items have expired (in seconds). Set to 0 to stop checking.                                                                                               |
-| `defaultTtl`       | `number`      | `0`           | The default number a seconds before an item should expire once it is added to the cache.                                                                                             |
-| `initialData`      | `CacheItem[]` |               | Initial items which should be inserted into the cache when it is created. Changing this after a cache has been created will have no effect.                                          |
-| `removeOnExpire`   | `boolean`     | `true`        | Whether expired items should be removed from the cache.                                                                                                                              |
-| `expireOnce`       | `boolean`     | `true`        | Whether an expired item should only trigger a single `expire` event, even if it is not removed from the cache and is still expired the next time the cache checks for expired items. |
-| `capacity`         | `number`      | `Infinity`    | The maximum number of items that can be in the cache.                                                                                                                                |
-| `errorOnFull`      | `boolean`     | `false`       | Whether to throw an error when attemtpting to add items which would result in `capacity` being exceeded.                                                                             |
-| `errorOnMiss`      | `boolean`     | `false`       | Whether to throw and error when attempting to retrieve a non existent item.                                                                                                          |
-| `errorOnDuplicate` | `boolean`     | `false`       | Whether to throw an error when adding an item with a key that is already in use.                                                                                                     |
+| Field              | Type      | Default Value | Description                                                                                                                                                                          |
+| ------------------ | --------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `interval`         | `number`  | `1`           | How frequently to check if items have expired (in seconds). Set to 0 to stop checking.                                                                                               |
+| `defaultTtl`       | `number`  | `0`           | The default number a seconds before an item should expire once it is added to the cache, 0 mean don't expire.                                                                        |
+| `removeOnExpire`   | `boolean` | `true`        | Whether expired items should be removed from the cache.                                                                                                                              |
+| `expireOnce`       | `boolean` | `true`        | Whether an expired item should only trigger a single `expire` event, even if it is not removed from the cache and is still expired the next time the cache checks for expired items. |
+| `capacity`         | `number`  | `Infinity`    | The maximum number of items that can be in the cache.                                                                                                                                |
+| `errorOnFull`      | `boolean` | `false`       | Whether to throw an error when attemtpting to add items which would result in `capacity` being exceeded.                                                                             |
+| `errorOnMiss`      | `boolean` | `false`       | Whether to throw and error when attempting to retrieve a non existent item.                                                                                                          |
+| `errorOnDuplicate` | `boolean` | `false`       | Whether to throw an error when adding an item with a key that is already in use.                                                                                                     |
 
 #### `CacheItem`
 
@@ -108,7 +139,7 @@ This type represents the stats that are stored about an item.
 Use this to add items to the cache. If the key being used already exists, by default the existing item will be replaced.
 
 ```ts
-const cache = new DataCache();
+const cache = new DataCache().init();
 
 cache.set({ key: "key1", value: "key2" }, { key: "key2", value: "value2" });
 ```
@@ -129,7 +160,7 @@ There are 3 potential ways this method can return -
 - If multiple keys are provided an object containing each `key`/`value` pair will be returned.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "key2" },
     { key: "key2", value: "value2" },
@@ -187,7 +218,7 @@ There are 2 possible uses for this method -
 - When no keys are specified then all items are removed. This gives the same affect as calling [`clear()`](#clear-void).
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "key2" },
     { key: "key2", value: "value2" },
@@ -211,7 +242,7 @@ Has the potential to throw an error if -
 Remove all items from the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
@@ -229,7 +260,7 @@ cache.get(); // {}
 Check whether a key exists in the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [{ key: "key1", value: "value1" }]
 });
 
@@ -242,7 +273,7 @@ cache.has("key2"); // false
 Get each key stored in the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
@@ -264,7 +295,7 @@ There are 3 possible uses for this method -
 - Passing in no keys will result in the stats for all items being returned in an object of containing `key`/`ItemStats` pairs.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
@@ -291,7 +322,7 @@ There are 2 possible uses for this method -
 - If no keys are passed then the stats for all items will be reset.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" }
@@ -320,7 +351,7 @@ Has the potential to throw an error if -
 Update the config being used by the cache.
 
 ```ts
-const cache = new DataCache();
+const cache = new DataCache().init();
 
 cache.config({
   errorOnMiss: true,
@@ -338,7 +369,7 @@ There are 2 ways to use this method -
 - If no keys are specified then all items will have their `ttl` updated.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" }
@@ -358,14 +389,16 @@ Has the potential to throw an error if -
 Remove expired items from the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
+  config: {
+    defaultTtl: 10, // Items expire after 10 seconds by default
+    removeOnExpire: false
+  },
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
     { key: "key3", value: "value3", ttl: 15 } // Item will expire after 15 seconds
-  ],
-  defaultTtl: 10, // Items expire after 10 seconds by default
-  removeOnExpire: false
+  ]
 });
 
 // 10 seconds later
@@ -385,14 +418,16 @@ There are 2 ways to use this method -
 - If no keys are passed in then all items are reset.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
+  config: {
+    defaultTtl: 10, // Items expire after 10 seconds by default
+    removeOnExpire: false
+  },
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
     { key: "key3", value: "value3", ttl: 15 } // Item will expire after 15 seconds
-  ],
-  defaultTtl: 10, // Items expire after 10 seconds by default
-  removeOnExpire: false
+  ]
 });
 
 // 10 Seconds later key1 and key2 are expired
@@ -410,7 +445,7 @@ Has the potential to throw an error if -
 Get each value stored in the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
@@ -426,7 +461,7 @@ cache.values(); // ["value1", "value2", "value3"]
 Get each `key`/`value` pair stored in the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
@@ -442,7 +477,7 @@ cache.entries(); // [["key1", "value1"], ["key2", "value2"], ["key3", "value3"]]
 Get the number of items stored in the cache.
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" },
@@ -460,7 +495,7 @@ cache.size(); // 3
 This event is triggered for each item that is added to the cache using [`set`](#setitems-cacheitem-void).
 
 ```ts
-const cache = new DataCache();
+const cache = new DataCache().init();
 
 cache.on("set", (key: string, value: unknown) => {
   console.log(`${key} + ${value as string}`);
@@ -477,7 +512,7 @@ cache.set({ key: "key1", value: "value1" }, { key: "key2", value: "value2" });
 This is event is triggered for each item that is retrieved using [`get`](#getkeys-string-unknown--recordstringunknown).
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" }
@@ -499,7 +534,7 @@ cache.get();
 This is event is triggered for each item that is retrieved using [`pop`](#popkeys-string-unknown--recordstring-unknown).
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" }
@@ -521,7 +556,7 @@ cache.pop();
 This event is triggered for each item that is removed using [`remove`](#removekeys-string-void).
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" }
@@ -543,7 +578,7 @@ cache.remove();
 This is event is triggered when the cache is cleared using [`clear`](#clear-void).
 
 ```ts
-const cache = new DataCache({
+const cache = new DataCache().init({
   initialData: [
     { key: "key1", value: "value1" },
     { key: "key2", value: "value2" }
