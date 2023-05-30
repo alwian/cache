@@ -2,11 +2,20 @@ import { EventEmitter } from "events";
 import { CacheConfig, CacheItem, ItemDetails, ItemStats } from "../types";
 import { checkDuplicateKeys, checkMissingKeys } from "../utils";
 
-export default class Cache extends EventEmitter {
-  #data: Record<string, unknown> = {};
-  #itemDetails: Record<string, ItemDetails> = {};
+export default class Cache<
+  ItemMap extends Record<string, any> = {
+    [key: string]: any;
+  }
+> extends EventEmitter {
+  #initialized = false;
 
-  #config: Omit<CacheConfig, "initialData"> = {
+  #data: Record<keyof ItemMap, any> = {} as Record<keyof ItemMap, any>;
+  #itemDetails: Record<keyof ItemMap, ItemDetails> = {} as Record<
+    keyof ItemMap,
+    ItemDetails
+  >;
+
+  #config: CacheConfig = {
     interval: 1,
     removeOnExpire: true,
     expireOnce: true,
@@ -24,26 +33,8 @@ export default class Cache extends EventEmitter {
    *
    * @param config Custom config to use.
    */
-  constructor(config?: Partial<CacheConfig>) {
+  constructor() {
     super();
-    const timeAdded = Date.now();
-
-    if (config) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { initialData, ...otherConfig } = config;
-      this.#config = { ...this.#config, ...otherConfig };
-
-      config.initialData?.forEach((item: CacheItem) => {
-        this.#data[item.key] = item.value;
-        this.#itemDetails[item.key] = {
-          ttl: item.ttl,
-          timeAdded,
-          stats: { accesses: 0 },
-          expired: false
-        };
-      });
-    }
-    this.#resetExpiryInterval();
   }
 
   #resetExpiryInterval() {
@@ -80,6 +71,47 @@ export default class Cache extends EventEmitter {
     }
   }
 
+  #initCheck(): void {
+    if (!this.#initialized) {
+      throw Error("You must call init() before you can use the cache.");
+    }
+  }
+
+  init<K extends keyof ItemMap>({
+    config,
+    initialData
+  }: {
+    config?: Partial<CacheConfig>;
+    initialData?: CacheItem<K, ItemMap[K]>[];
+  } = {}): Cache<ItemMap> {
+    if (this.#initialized) {
+      throw Error("Cache has already been initialized.");
+    }
+
+    const timeAdded = Date.now();
+
+    if (config) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      this.#config = { ...this.#config, ...config };
+    }
+
+    if (initialData) {
+      initialData.forEach((item: CacheItem<K, ItemMap[K]>) => {
+        this.#data[item.key] = item.value;
+        this.#itemDetails[item.key] = {
+          ttl: item.ttl,
+          timeAdded,
+          stats: { accesses: 0 },
+          expired: false
+        };
+      });
+    }
+
+    this.#resetExpiryInterval();
+    this.#initialized = true;
+    return this;
+  }
+
   /**
    * Retrieve items from the cache.
    *
@@ -88,7 +120,10 @@ export default class Cache extends EventEmitter {
    * @param keys The keys to return. If no keys are specified then all items will be returned.
    * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
    */
-  get(...keys: string[]): unknown | Record<string, unknown> {
+  get<K extends keyof ItemMap>(
+    ...keys: K[]
+  ): ItemMap[K] | Record<K, ItemMap[K]> {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -103,8 +138,8 @@ export default class Cache extends EventEmitter {
       return this.#data[keys[0]];
     }
 
-    const items: Record<string, unknown> = {};
-    keys.forEach((key: string) => {
+    const items: Record<K, ItemMap[K]> = {} as Record<K, ItemMap[K]>;
+    keys.forEach((key: K) => {
       if (this.#data[key]) {
         items[key] = this.#data[key];
         if (items[key]) this.#itemDetails[key].stats.accesses += 1;
@@ -121,11 +156,12 @@ export default class Cache extends EventEmitter {
    *
    * @param items The items to store.
    */
-  set(...items: CacheItem[]): void {
+  set<K extends keyof ItemMap>(...items: CacheItem<K, ItemMap[K]>[]): void {
+    this.#initCheck();
     if (this.#config.errorOnDuplicate) {
       checkDuplicateKeys(
         this.keys(),
-        items.map((item: CacheItem) => item.key)
+        items.map((item: CacheItem<K, ItemMap[K]>) => item.key)
       );
     }
 
@@ -160,7 +196,8 @@ export default class Cache extends EventEmitter {
    *
    * @param keys The keys of the items to remove. If not keys specified then all items will be removed.
    */
-  remove(...keys: string[]): void {
+  remove<K extends keyof ItemMap>(...keys: K[]): void {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -169,7 +206,7 @@ export default class Cache extends EventEmitter {
       keys = this.keys();
     }
 
-    keys.forEach((key: string) => {
+    keys.forEach((key: K) => {
       const keyCopy = key;
       const valueCopy = this.#data[key];
       delete this.#data[key];
@@ -187,7 +224,10 @@ export default class Cache extends EventEmitter {
    * @param keys The keys to retrieve. If no keys are specified then all items will be returned.
    * @returns Either the item for the specified key, an object containing all items if no keys specified, or an object containing the keys specified if >1 provided.
    */
-  pop(...keys: string[]): unknown | Record<string, unknown> {
+  pop<K extends keyof ItemMap>(
+    ...keys: K[]
+  ): ItemMap[K] | Record<K, ItemMap[K]> {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -202,8 +242,8 @@ export default class Cache extends EventEmitter {
       return value;
     }
 
-    const items: Record<string, unknown> = {};
-    keys.forEach((key: string) => {
+    const items: Record<K, ItemMap[K]> = {} as Record<K, ItemMap[K]>;
+    keys.forEach((key: K) => {
       items[key] = this.#data[key];
       delete this.#data[key];
       delete this.#itemDetails[key];
@@ -219,7 +259,8 @@ export default class Cache extends EventEmitter {
    * Emits a `clear` event when called.
    */
   clear(): void {
-    this.#data = {};
+    this.#initCheck();
+    this.#data = {} as Record<keyof ItemMap, any>;
     this.emit("clear");
   }
 
@@ -230,6 +271,7 @@ export default class Cache extends EventEmitter {
    * @returns Whether the given key exists in the cache.
    */
   has(key: string): boolean {
+    this.#initCheck();
     return this.keys().includes(key);
   }
 
@@ -238,8 +280,9 @@ export default class Cache extends EventEmitter {
    *
    * @returns The keys that exist in the cache.
    */
-  keys(): string[] {
-    return Object.keys(this.#data);
+  keys<K extends keyof ItemMap>(): K[] {
+    this.#initCheck();
+    return Object.keys(this.#data) as K[];
   }
 
   /**
@@ -248,7 +291,10 @@ export default class Cache extends EventEmitter {
    * @param keys The keys to retrieve stats for.
    * @returns Either the stats for a given key, an object containing stats for each key provided is >1 specified, or cumulative stats for the entire cache if no keys given.
    */
-  stats(...keys: string[]): ItemStats | Record<string, ItemStats> {
+  stats<K extends keyof ItemMap>(
+    ...keys: K[]
+  ): ItemStats | undefined | Record<K, ItemStats | undefined> {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -259,8 +305,11 @@ export default class Cache extends EventEmitter {
       return this.#itemDetails[keys[0]]?.stats;
     }
 
-    const stats: Record<string, ItemStats> = {};
-    keys.forEach((key: string) => {
+    const stats: Record<keyof ItemMap, ItemStats> = {} as Record<
+      keyof ItemMap,
+      ItemStats
+    >;
+    keys.forEach((key: keyof ItemMap) => {
       if (this.#data[key]) {
         stats[key] = this.#itemDetails[key].stats;
       }
@@ -274,7 +323,8 @@ export default class Cache extends EventEmitter {
    *
    * @param keys The keys to reset the stats of. If no keys specified all items will be reset.
    */
-  clearStats(...keys: string[]): void {
+  clearStats<K extends keyof ItemMap>(...keys: K[]): void {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -283,7 +333,7 @@ export default class Cache extends EventEmitter {
       keys = this.keys();
     }
 
-    this.keys().forEach((key: string) => {
+    this.keys().forEach((key: keyof ItemMap) => {
       this.#itemDetails[key].stats = {
         accesses: 0
       };
@@ -295,7 +345,8 @@ export default class Cache extends EventEmitter {
    *
    * @param config A new config to merge with the current config.
    */
-  config(config: Partial<Omit<CacheConfig, "initialData">>): void {
+  config(config: Partial<CacheConfig>): void {
+    this.#initCheck();
     this.#config = {
       ...this.#config,
       ...config
@@ -309,7 +360,8 @@ export default class Cache extends EventEmitter {
    * @param ttl The new ttl to use.
    * @param keys The items to update. If no items specified then all items will be affected.
    */
-  ttl(ttl: number, ...keys: string[]): void {
+  ttl<K extends keyof ItemMap>(ttl: number, ...keys: K[]): void {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -318,7 +370,7 @@ export default class Cache extends EventEmitter {
       keys = this.keys();
     }
 
-    keys.forEach((key: string) => {
+    keys.forEach((key: keyof ItemMap) => {
       if (this.#itemDetails[key]) {
         this.#itemDetails[key].ttl = ttl;
       }
@@ -331,6 +383,7 @@ export default class Cache extends EventEmitter {
    * Useful for when `removeOnExpire` is `false` but you want to remove expired data.
    */
   purge(): void {
+    this.#initCheck();
     for (const [key, value] of Object.entries(this.#itemDetails)) {
       const ttl = value.ttl || this.#config.defaultTtl;
       const time = Date.now();
@@ -346,7 +399,8 @@ export default class Cache extends EventEmitter {
    *
    * @param keys The items to reset. If no keys specified all items will be affected.
    */
-  resetExpiry(...keys: string[]): void {
+  resetExpiry<K extends keyof ItemMap>(...keys: K[]): void {
+    this.#initCheck();
     if (this.#config.errorOnMiss) {
       checkMissingKeys(this.keys(), keys);
     }
@@ -356,7 +410,7 @@ export default class Cache extends EventEmitter {
     }
 
     const time = Date.now();
-    keys.forEach((key: string) => {
+    keys.forEach((key: K) => {
       if (this.#data[key]) {
         this.#itemDetails[key].timeAdded = time;
         this.#itemDetails[key].expired = false;
@@ -369,7 +423,8 @@ export default class Cache extends EventEmitter {
    *
    * @returns An array containing each value stored.
    */
-  values(): unknown[] {
+  values<K extends keyof ItemMap>(): ItemMap[K][] {
+    this.#initCheck();
     return Object.values(this.#data);
   }
 
@@ -378,14 +433,19 @@ export default class Cache extends EventEmitter {
    *
    * @returns An array in the format of `[[key, value],...]`.
    */
-  entries(): [string, unknown][] {
-    return Object.entries(this.#data);
+  entries(): [keyof ItemMap, ItemMap[keyof ItemMap]][] {
+    this.#initCheck();
+    return Object.entries(this.#data) as [
+      keyof ItemMap,
+      ItemMap[keyof ItemMap]
+    ][];
   }
 
   /**
    * Get the number of items in the cache.
    */
   size(): number {
+    this.#initCheck();
     return this.keys().length;
   }
 }

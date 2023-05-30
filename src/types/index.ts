@@ -1,6 +1,6 @@
-export interface CacheItem {
-  key: string;
-  value: unknown;
+export interface CacheItem<K, T> {
+  key: K;
+  value: T;
   ttl?: number;
 }
 
@@ -17,7 +17,6 @@ export interface ItemDetails {
 export interface CacheConfig {
   interval: number;
   defaultTtl: number;
-  initialData?: CacheItem[];
   removeOnExpire: boolean;
   expireOnce: boolean;
   capacity: number;
