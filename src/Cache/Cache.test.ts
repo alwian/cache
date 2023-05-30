@@ -4,16 +4,32 @@ import Cache from ".";
 jest.useFakeTimers();
 
 describe("Cache tests", () => {
+  describe("init tests", () => {
+    it("Throws an error when init has already ben called", () => {
+      const cache = new Cache().init();
+      expect(() => cache.init()).toThrowError(
+        "Cache has already been initialized."
+      );
+    });
+  });
+
   describe("get tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.get("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can retrieve a single item from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.get("key1")).toEqual("value1");
     });
 
     it("Can retrieve a multiple items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -26,7 +42,7 @@ describe("Cache tests", () => {
     });
 
     it("Can retrieve all items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -39,8 +55,10 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({
-        errorOnMiss: true
+      const cache = new Cache().init({
+        config: {
+          errorOnMiss: true
+        }
       });
 
       expect(() => cache.get("key1", "key2")).toThrowError(
@@ -49,7 +67,7 @@ describe("Cache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is true", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -59,7 +77,7 @@ describe("Cache tests", () => {
     it("Emits a get event when items are retrieved", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -77,14 +95,21 @@ describe("Cache tests", () => {
   });
 
   describe("set tests", () => {
-    it("Can add items to the cache", () => {
+    it("Throws an error when the cache has not been initialized", () => {
       const cache = new Cache();
+      expect(() => cache.set({ key: "key1", value: "value1" })).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
+    it("Can add items to the cache", () => {
+      const cache = new Cache().init();
       cache.set({ key: "key1", value: "value1" });
       expect(cache.get("key1")).toEqual("value1");
     });
 
     it("Throws an error when errorOnDuplicate is true", () => {
-      const cache = new Cache({ errorOnDuplicate: true });
+      const cache = new Cache().init({ config: { errorOnDuplicate: true } });
       cache.set({ key: "key1", value: "value1" });
       expect(() =>
         cache.set(
@@ -96,7 +121,7 @@ describe("Cache tests", () => {
     });
 
     it("Overwites items when errorOnDuplicate is false", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
       cache.set(
@@ -110,14 +135,16 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnFull is true", () => {
-      const cache = new Cache({ errorOnFull: true, capacity: 0 });
+      const cache = new Cache().init({
+        config: { errorOnFull: true, capacity: 0 }
+      });
       expect(() => cache.set({ key: "key1", value: "value1" })).toThrowError(
         "Could not add items as capacity would be exceeded"
       );
     });
 
     it("Allows items to be added up to capacity when errorOnFull is false", () => {
-      const cache = new Cache({ capacity: 1 });
+      const cache = new Cache().init({ config: { capacity: 1 } });
       cache.set(
         { key: "key1", value: "value1" },
         { key: "key2", value: "value2" }
@@ -130,7 +157,7 @@ describe("Cache tests", () => {
     it("Emits a set event for each item added", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache();
+      const cache = new Cache().init();
       cache.on("set", (key: string, value: string) => {
         mockFn(key, value);
       });
@@ -146,8 +173,15 @@ describe("Cache tests", () => {
   });
 
   describe("remove tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.remove("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can remove items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.get("key1")).toEqual("value1");
@@ -156,7 +190,7 @@ describe("Cache tests", () => {
     });
 
     it("Can remove all items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -170,16 +204,14 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({ errorOnMiss: true });
+      const cache = new Cache().init({ config: { errorOnMiss: true } });
       expect(() => cache.remove("key1")).toThrow(
         "The following keys do not exist on the cache - key1"
       );
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new Cache({
-        initialData: [{ key: "key1", value: "value1" }]
-      });
+      const cache = new Cache().init();
 
       cache.remove("key1", "key2");
       expect(cache.get("key1")).toBeUndefined();
@@ -188,7 +220,7 @@ describe("Cache tests", () => {
     it("Emits a remove event for each item removed", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -206,8 +238,15 @@ describe("Cache tests", () => {
   });
 
   describe("pop tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.pop("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can pop items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.pop("key1")).toEqual("value1");
@@ -215,7 +254,7 @@ describe("Cache tests", () => {
     });
 
     it("Can pop multiple items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -232,7 +271,7 @@ describe("Cache tests", () => {
     });
 
     it("Can pop all items from the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -243,12 +282,12 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
         ],
-        errorOnMiss: true
+        config: { errorOnMiss: true }
       });
       expect(() => cache.pop("key1", "key3")).toThrowError(
         "The following keys do not exist on the cache - key3"
@@ -256,7 +295,7 @@ describe("Cache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
       expect(cache.pop("key1", "key2")).toEqual({ key1: "value1" });
@@ -265,7 +304,7 @@ describe("Cache tests", () => {
     it("Emits a pop event for each item removed", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -283,8 +322,15 @@ describe("Cache tests", () => {
   });
 
   describe("clear tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.clear()).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can clear the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -299,7 +345,7 @@ describe("Cache tests", () => {
     it("Emits a clear even when called", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache();
+      const cache = new Cache().init();
       cache.on("clear", () => {
         mockFn();
       });
@@ -309,8 +355,15 @@ describe("Cache tests", () => {
   });
 
   describe("has tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.has("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can check if a key exists", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -320,8 +373,15 @@ describe("Cache tests", () => {
   });
 
   describe("keys tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.keys()).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can return a list of keys that exist", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -333,8 +393,15 @@ describe("Cache tests", () => {
   });
 
   describe("stats tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.stats("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can return stats for a single item", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -343,7 +410,7 @@ describe("Cache tests", () => {
     });
 
     it("Can return stats for multiple items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -357,7 +424,7 @@ describe("Cache tests", () => {
     });
 
     it("Can return stats for all items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -371,7 +438,7 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({ errorOnMiss: true });
+      const cache = new Cache().init({ config: { errorOnMiss: true } });
 
       expect(() => cache.stats("key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -379,7 +446,7 @@ describe("Cache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -390,8 +457,15 @@ describe("Cache tests", () => {
   });
 
   describe("clearStats tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.clearStats("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can reset the stats of items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -403,7 +477,7 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({ errorOnMiss: true });
+      const cache = new Cache().init({ config: { errorOnMiss: true } });
 
       expect(() => cache.clearStats("key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -411,7 +485,7 @@ describe("Cache tests", () => {
     });
 
     it("Does not throw an error when errorOnMiss is false", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1" }]
       });
 
@@ -424,8 +498,15 @@ describe("Cache tests", () => {
   });
 
   describe("config tests", () => {
-    it("Can accept an updated config", () => {
+    it("Throws an error when the cache has not been initialized", () => {
       const cache = new Cache();
+      expect(() => cache.config({})).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
+    it("Can accept an updated config", () => {
+      const cache = new Cache().init();
       cache.get("key1"); // Shouldn't error as errorOnMiss is false
       cache.config({ errorOnMiss: true });
       expect(() => cache.get("key1")).toThrowError(
@@ -435,8 +516,15 @@ describe("Cache tests", () => {
   });
 
   describe("ttl tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.ttl(10, "key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can update the ttl of items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
 
@@ -448,7 +536,7 @@ describe("Cache tests", () => {
     });
 
     it("Can update the ttl of all items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
 
@@ -460,7 +548,7 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({ errorOnMiss: true });
+      const cache = new Cache().init({ config: { errorOnMiss: true } });
 
       expect(() => cache.ttl(5, "key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -468,7 +556,7 @@ describe("Cache tests", () => {
     });
 
     it("Does not throw an error when errorOnMiss is false", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
 
@@ -481,14 +569,20 @@ describe("Cache tests", () => {
   });
 
   describe("purge tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.purge()).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can remove expired items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1", ttl: 5 },
           { key: "key2", value: "value2" }
         ],
-        removeOnExpire: false,
-        defaultTtl: 3
+        config: { removeOnExpire: false, defaultTtl: 3 }
       });
       jest.advanceTimersByTime(4000);
       expect(cache.get("key1")).toEqual("value1");
@@ -500,8 +594,15 @@ describe("Cache tests", () => {
   });
 
   describe("resetExpiry tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.resetExpiry("key1")).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can reset the expiry of items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       jest.advanceTimersByTime(4000);
@@ -514,7 +615,7 @@ describe("Cache tests", () => {
     });
 
     it("Can reset the expiry of all items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       jest.advanceTimersByTime(4000);
@@ -527,7 +628,7 @@ describe("Cache tests", () => {
     });
 
     it("Throws an error when errorOnMiss is true", () => {
-      const cache = new Cache({ errorOnMiss: true });
+      const cache = new Cache().init({ config: { errorOnMiss: true } });
 
       expect(() => cache.resetExpiry("key1")).toThrowError(
         "The following keys do not exist on the cache - key1"
@@ -535,7 +636,7 @@ describe("Cache tests", () => {
     });
 
     it("Doesn't throw an error when errorOnMiss is false", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       jest.advanceTimersByTime(4000);
@@ -549,8 +650,15 @@ describe("Cache tests", () => {
   });
 
   describe("values tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.values()).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can return the values in the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -561,8 +669,15 @@ describe("Cache tests", () => {
   });
 
   describe("entries tests", () => {
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.entries()).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
     it("Can return the entries in the cache", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -576,8 +691,15 @@ describe("Cache tests", () => {
   });
 
   describe("size tests", () => {
-    it("Can retrun the size of the cache", () => {
-      const cache = new Cache({
+    it("Throws an error when the cache has not been initialized", () => {
+      const cache = new Cache();
+      expect(() => cache.size()).toThrowError(
+        "You must call init() before you can use the cache."
+      );
+    });
+
+    it("Can return the size of the cache", () => {
+      const cache = new Cache().init({
         initialData: [
           { key: "key1", value: "value1" },
           { key: "key2", value: "value2" }
@@ -589,7 +711,7 @@ describe("Cache tests", () => {
 
   describe("expiry loop tests", () => {
     it("Removes expired items", () => {
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       expect(cache.get("key1")).toEqual("value1");
@@ -600,7 +722,7 @@ describe("Cache tests", () => {
     it("Triggers an expire event when an item expires", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }]
       });
       cache.on("expire", (key: string, value: string) => {
@@ -613,10 +735,9 @@ describe("Cache tests", () => {
     it("Only triggers a single expire event per item when expireOnce is true", () => {
       const mockFn = jest.fn();
 
-      const cache = new Cache({
+      const cache = new Cache().init({
         initialData: [{ key: "key1", value: "value1", ttl: 5 }],
-        expireOnce: true,
-        removeOnExpire: false
+        config: { expireOnce: true, removeOnExpire: false }
       });
       cache.on("expire", (key: string, value: string) => {
         mockFn(key, value);
