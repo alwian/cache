@@ -8,6 +8,7 @@ Cache is a [type safe](#type-safety) way to store data with ttls. Event listnene
   - [Installation](#installation)
   - [Basic Usage](#basic-usage)
 - [API](#api)
+- [Release History](#release-history)
 
 ## Getting Started
 
@@ -593,3 +594,12 @@ cache.clear();
 
 // console.log: Cache cleared
 ```
+
+---
+
+## Release History
+
+| Version | Date       | Description                                                                                                                                                                                                                    |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.0.0   | 31/05/2023 | This release introduces type safety throughout Cache. Can be used to predefine keys that can be used and the type of value they correspond to, this also makes it possible to narrow down the return types of various methods. |
+| 0.0.2   | 28/05/2023 | Initial release (I messed up 0.0.1 so had to skip). This release contains the initial version of Cache with all of the standard functionality I thought should be included.                                                    |

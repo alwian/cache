@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- 31/05/2023 - Added type safety to Cache methods.
+## 1.0.0
+
+- 31/05/2023 - BREAKING CHANGE - Added type safety to Cache.
 
 ## 0.0.2
 
