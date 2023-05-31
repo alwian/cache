@@ -1,6 +1,6 @@
 {
   "name": "@alwian/cache",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Type safe caching of data with ttls.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
